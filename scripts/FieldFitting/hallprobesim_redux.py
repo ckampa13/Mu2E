@@ -136,10 +136,10 @@ if __name__ == "__main__":
     #                              cfg_geom_Cole_250mm_long_cyl, cfg_params_Cole_Hel,
     #                              cfg_pickle_Cole_Hel, cfg_plot_mpl)
 
-    hmd, ff = field_map_analysis('fma_cole_cyl', cfg_data_Cole_250mm_long_cyl,
-                                 cfg_geom_Cole_250mm_long_cyl, cfg_params_Cole_Cyl,
-                                 cfg_pickle_Cole_Cyl, cfg_plot_mpl)
+    # hmd, ff = field_map_analysis('fma_cole_cyl', cfg_data_Cole_250mm_long_cyl,
+    #                              cfg_geom_Cole_250mm_long_cyl, cfg_params_Cole_Cyl,
+    #                              cfg_pickle_Cole_Cyl, cfg_plot_mpl)
 
-    # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-    #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-    #                              cfg_pickle_Mau13, cfg_plot_mpl)
+    hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
+                                 cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+                                 cfg_pickle_Mau13, cfg_plot_mpl)

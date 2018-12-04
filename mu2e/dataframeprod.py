@@ -192,8 +192,10 @@ class DataFrameMaker(object):
 
         elif 'Mau13' in self.field_map_version:
             self.data_frame = pd.read_csv(
-                self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
+                self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
                 skiprows=4)
+                # self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
+                # skiprows=4)
 
         elif 'Cole' in self.field_map_version:
             self.data_frame = pd.read_csv(
@@ -602,11 +604,11 @@ if __name__ == "__main__":
     #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
     # data_maker.do_basic_modifications(descale=True, reverse=True)
 
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'datafiles/FieldMapsCole/10x_high_granularity_cylin_3846784pts_r250mm_p10cm_10-06_004607',
-        input_type='csv', field_map_version='Cole_10x_v2_hg',
-        header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    data_maker.do_basic_modifications(descale=True, reverse=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/FieldMapsCole/10x_high_granularity_cylin_3846784pts_r250mm_p10cm_10-06_004607',
+    #     input_type='csv', field_map_version='Cole_10x_v2_hg',
+    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
+    # data_maker.do_basic_modifications(descale=True, reverse=True)
 
     # data_maker = DataFrameMaker(
     #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_985152pts_10-03_150151',
@@ -614,10 +616,10 @@ if __name__ == "__main__":
     #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
     # data_maker.do_basic_modifications(descale=True, reverse=True)
 
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13',
-    #     input_type='csv', field_map_version='Mau13')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13',
+        input_type='csv', field_map_version='Mau13')
+    data_maker.do_basic_modifications(-3.896, descale=True)
 
     data_maker.make_dump()
     # data_maker.make_dump('_noOffset')
