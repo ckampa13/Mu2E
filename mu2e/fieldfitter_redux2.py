@@ -120,7 +120,8 @@ class FieldFitter:
             Nothing.  Generates class attributes after fitting, and saves parameter values, if
             saving is specified.
         """
-        func_version = cfg_params.version
+        # func_version = cfg_params.version
+        func_version = cfg_params.func_version
         Bz           = []
         Br           = []
         Bphi         = []

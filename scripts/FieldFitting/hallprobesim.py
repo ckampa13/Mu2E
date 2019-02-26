@@ -15,6 +15,7 @@ from six.moves import range
 cfg_data   = namedtuple('cfg_data', 'datatype magnet path conditions')
 cfg_geom   = namedtuple('cfg_geom', 'geom z_steps r_steps phi_steps x_steps y_steps '
                         'bad_calibration interpolate do2pi')
+# cfg_params = namedtuple('cfg_params', 'ns ms cns cms nms Reff n_scale m_scale func_version')
 cfg_params = namedtuple('cfg_params', 'ns ms cns cms nms Reff n_scale m_scale func_version')
 cfg_pickle = namedtuple('cfg_pickle', 'use_pickle save_pickle load_name save_name recreate')
 cfg_plot   = namedtuple('cfg_plot', 'plot_type zlims save_loc sub_dir')
@@ -807,7 +808,7 @@ cfg_pickle_Cole_Hel                 = cfg_pickle(use_pickle=False, save_pickle=T
                                                  save_name='Cole_Hel', recreate=False)
 
 cfg_params_Cole_DS_Mau13            = cfg_params(ns=20, ms=2, cns=0, cms=0, nms=0, Reff=13350,
-                                                 n_scale=1, m_scale=1, func_version=119)
+                                                 n_scale=1, m_scale=1, func_version=1000)#func_version=119)
 cfg_pickle_Cole_Mau13               = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Cole_Hel',
                                                  save_name='Cole_Hel', recreate=False)
@@ -1178,10 +1179,10 @@ if __name__ == "__main__":
     #                              cfg_geom_hel_nubs, cfg_params_Cole_DS_Nubs,
     #                              cfg_pickle_Cole_Nubs, cfg_plot_mpl)
 
-    # hmd, ff = field_map_analysis('halltoy_Mau13', cfg_data_DS_Mau13,
-    #                              cfg_geom_cyl_800mm_trk, cfg_params_Cole_DS_Mau13,
-    #                              cfg_pickle_Cole_Mau13, cfg_plot_mpl)
+    hmd, ff = field_map_analysis('halltoy_Mau13', cfg_data_DS_Mau13,
+                                 cfg_geom_cyl_800mm_trk, cfg_params_Cole_DS_Mau13,
+                                 cfg_pickle_Cole_Mau13, cfg_plot_mpl)
 
-    hmd, ff = field_map_analysis('halltoy_Cole_Hel250', cfg_data_DS_Cole_Hel_10x2,
-                                 cfg_geom_hel_250mm2, cfg_params_Cole_DS_Hel250,
-                                 cfg_pickle_Cole_Hel250, cfg_plot_mpl)
+    # hmd, ff = field_map_analysis('halltoy_Cole_Hel250', cfg_data_DS_Cole_Hel_10x2,
+    #                              cfg_geom_hel_250mm2, cfg_params_Cole_DS_Hel250,
+    #                              cfg_pickle_Cole_Hel250, cfg_plot_mpl)
