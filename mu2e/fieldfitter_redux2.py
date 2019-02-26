@@ -217,12 +217,12 @@ class FieldFitter:
             self.result = self.mod.fit(np.concatenate([Br, Bz, Bphi]).ravel(),
                                        # weights=np.concatenate([mag, mag, mag]).ravel(),
                                        r=RR, z=ZZ, phi=PP, x=XX, y=YY, params=self.params,
-                                       # method='leastsq', fit_kws={'maxfev': 10000})
-                                       method='least_squares', fit_kws={'verbose': 1,
-                                                                        'gtol': 1e-16,
-                                                                        'ftol': 1e-16,
-                                                                        'xtol': 1e-16,
-                                                                        })
+                                       method='leastsq', fit_kws={'maxfev': 10000})
+                                       # method='least_squares', fit_kws={'verbose': 1,
+                                       #                                  'gtol': 1e-16,
+                                       #                                  'ftol': 1e-16,
+                                       #                                  'xtol': 1e-16,
+                                       #                                  })
                                        ##                                   # 'tr_solver': 'lsmr',
                                        ##                                   # 'tr_options':
                                        ##                                   # {'regularize': True}

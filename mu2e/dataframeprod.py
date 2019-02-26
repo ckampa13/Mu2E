@@ -259,6 +259,9 @@ class DataFrameMaker(object):
             self.data_frame.eval('X = X/1000', inplace=True)
             self.data_frame.eval('Y = Y/1000', inplace=True)
             self.data_frame.eval('Z = Z/1000', inplace=True)
+            self.data_frame.eval('Bx = Bx*10000', inplace=True)
+            self.data_frame.eval('By = By*10000', inplace=True)
+            self.data_frame.eval('Bz = Bz*10000', inplace=True)
 
         # Offset x-axis
         if offset:
@@ -268,7 +271,8 @@ class DataFrameMaker(object):
             # Generate radial position column
             # self.data_frame.loc[:, 'R'] = rt.apply_make_r(self.data_frame['X'].values,
             #                                               self.data_frame['Y'].values)
-            self.data_frame.eval('R = sqrt(A**2+B**2)', inplace=True)
+            self.data_frame.eval('R = sqrt(X**2+Y**2)', inplace=True)
+            # self.data_frame.eval('R = sqrt(A**2+B**2)', inplace=True)
 
             # Generate negative Y-axis values for some hard-coded versions.
             if (any([vers in self.field_map_version for vers in ['Mau9', 'Mau10', 'GA01']]) and
@@ -292,7 +296,8 @@ class DataFrameMaker(object):
             # self.data_frame.loc[:, 'Br'] = rt.apply_make_br(self.data_frame['Phi'].values,
             #                                                 self.data_frame['Bx'].values,
             #                                                 self.data_frame['By'].values)
-            self.data_frame.query('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
+            self.data_frame.eval('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
+            # self.data_frame.query('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
         elif reverse and not descale:
             # self.data_frame.Phi = self.data_frame.Phi-np.pi
             self.data_frame.eval('X = R*cos(Phi)', inplace=True)
@@ -621,11 +626,11 @@ if __name__ == "__main__":
     #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
     # data_maker.do_basic_modifications(descale=True, reverse=True)
 
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052',
-        input_type='csv', field_map_version='Cole_1m_hg',
-        header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    data_maker.do_basic_modifications(descale=True, reverse=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052',
+    #     input_type='csv', field_map_version='Cole_1m_hg',
+    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
+    # data_maker.do_basic_modifications(descale=True, reverse=True)
 
     # data_maker = DataFrameMaker(
     #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_985152pts_10-03_150151',

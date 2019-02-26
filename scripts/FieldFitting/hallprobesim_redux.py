@@ -139,9 +139,15 @@ cfg_plot_plotly_high_lim = cfg_plot('plotly', [-10, 10], 'html', None)
 ##############################
 # the params and pickle cfgs #
 ##############################
-cfg_params_DS_Mau13                 = cfg_params(pitch1=25, ms_h1=30, ns_h1=3,
+# cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+#                                                  pitch2=0, ms_h2=0, ns_h2=0,
+#                                                  length1=13, ms_c1=30, ns_c1=6,
+#                                                  length2=0, ms_c2=0, ns_c2=0,
+#                                                  ks_dict={'k3': 10000}, bs_tuples=None,
+#                                                  bs_bounds=None, version=1000)
+cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=0, ms_c1=0, ns_c1=0,
+                                                 length1=10, ms_c1=50, ns_c1=4,
                                                  length2=0, ms_c2=0, ns_c2=0,
                                                  ks_dict={'k3': 10000}, bs_tuples=None,
                                                  bs_bounds=None, version=1000)
@@ -221,6 +227,6 @@ if __name__ == "__main__":
     #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
     #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
 
-    hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-                                 cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-                                 cfg_pickle_Mau13, cfg_plot_mpl)
+    # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
+    #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+    #                              cfg_pickle_Mau13, cfg_plot_mpl)
