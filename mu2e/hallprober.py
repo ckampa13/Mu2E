@@ -92,7 +92,7 @@ from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
 interp_studies = imp.load_source(
-    'interp_studies', '/Users/brianpollack/Coding/Mu2E/scripts/FieldFitting/interp_studies.py')
+    'interp_studies', '/home/ckampa/Coding/Mu2E/scripts/FieldFitting/interp_studies.py')
 
 warnings.simplefilter('always', DeprecationWarning)
 
@@ -558,7 +558,8 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
     if cfg_plot.save_loc == 'local':
         save_dir = mu2e.mu2e_ext_path+'plots/'+name
     elif cfg_plot.save_loc == 'html':
-        save_dir = '/Users/brianpollack/Documents/PersonalWebPage/mu2e_plots/'+name
+        save_dir = mu2e.mu2e_ext_path+'plots/html/'+name
+        # save_dir = '/home/ckampa/Plots/FieldFitting/'+name
 
     for step in steps:
         for ABC in ABC_geom[geom]:
@@ -574,7 +575,7 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
             # and transfer them to the appropriate save location.
             if plot_type == 'plotly_html_img':
 
-                init_loc = '/Users/brianpollack/Downloads/'+save_name+'.jpeg'
+                init_loc = '/home/ckampa/Downloads/'+save_name+'.jpeg'
                 final_loc = save_dir+'/'+save_name+'.jpeg'
                 while not os.path.exists(init_loc):
                         print('waiting for', init_loc, 'to download')

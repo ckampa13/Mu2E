@@ -619,11 +619,11 @@ if __name__ == "__main__":
     #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
     # data_maker.do_basic_modifications(descale=True, reverse=True)
 
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052',
-        input_type='csv', field_map_version='Cole_1m_hg',
-        header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    data_maker.do_basic_modifications(descale=True, reverse=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052',
+    #     input_type='csv', field_map_version='Cole_1m_hg',
+    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
+    # data_maker.do_basic_modifications(descale=True, reverse=True)
 
     # data_maker = DataFrameMaker(
     #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_985152pts_10-03_150151',
@@ -636,7 +636,14 @@ if __name__ == "__main__":
     #     input_type='csv', field_map_version='Mau13')
     # data_maker.do_basic_modifications(-3.896, descale=True)
 
-    data_maker.make_dump()
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_r250mm_p10cm_lengthx10_1232173pts_09-07_160736',
+        input_type='pkl', field_map_version='Cole_1m_hg',
+        header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
+    data_maker.do_basic_modifications(descale=True, reverse=True)
+
+    # data_maker.make_dump()
     # data_maker.make_dump('_noOffset')
+    data_maker.make_dump('_FIXED')
     print(data_maker.data_frame.head())
     print(data_maker.data_frame.tail())

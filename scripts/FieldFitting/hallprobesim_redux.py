@@ -7,6 +7,7 @@ import numpy as np
 from mu2e import mu2e_ext_path
 from mu2e.src.make_csv import make_csv
 from six.moves import range
+from sys import argv
 
 ############################
 # defining the cfg structs #
@@ -139,12 +140,24 @@ cfg_plot_plotly_high_lim = cfg_plot('plotly', [-10, 10], 'html', None)
 ##############################
 # the params and pickle cfgs #
 ##############################
-cfg_params_DS_Mau13                 = cfg_params(pitch1=25, ms_h1=30, ns_h1=3,
+cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=0, ms_c1=0, ns_c1=0,
+                                                 length1=10, ms_c1=50, ns_c1=4,
                                                  length2=0, ms_c2=0, ns_c2=0,
                                                  ks_dict={'k3': 10000}, bs_tuples=None,
                                                  bs_bounds=None, version=1000)
+
+cfg_pickle_Mau13_trajtest                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13traj',
+                                                 save_name='Mau13traj', recreate=False)
+
+# cfg_params_DS_Mau13                 = cfg_params(pitch1=13, ms_h1=50, ns_h1=4,
+#                                                  pitch2=0, ms_h2=0, ns_h2=0,
+#                                                  length1=0, ms_c1=0, ns_c1=0,
+#                                                  length2=0, ms_c2=0, ns_c2=0,
+#                                                  ks_dict={'k3': 10000}, bs_tuples=None,
+#                                                  bs_bounds=None, version=1000)
+
 cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13',
                                                  save_name='Mau13', recreate=False)
@@ -204,23 +217,27 @@ cfg_pickle_Cole_1m_Cyl              = cfg_pickle(use_pickle=False, save_pickle=T
                                                  load_name='Cole_1m_Cyl',
                                                  save_name='Cole_1m_Cyl', recreate=False)
 if __name__ == "__main__":
+    if len(argv) != 1:
+        # hmd, ff = field_map_analysis('fma_cole_hel', cfg_data_Cole_250mm_long_cyl,
+        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel,
+        #                              cfg_pickle_Cole_Hel, cfg_plot_mpl)
 
-    hmd, ff = field_map_analysis('fma_cole_hel', cfg_data_Cole_250mm_long_cyl,
-                                 cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel,
-                                 cfg_pickle_Cole_Hel, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_cole_short_hel', cfg_data_Cole_250mm_short_cyl,
+        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel_Short,
+        #                              cfg_pickle_Cole_Hel_Short, cfg_plot_mpl)
 
-    # hmd, ff = field_map_analysis('fma_cole_short_hel', cfg_data_Cole_250mm_short_cyl,
-    #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel_Short,
-    #                              cfg_pickle_Cole_Hel_Short, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_cole_cyl', cfg_data_Cole_250mm_long_cyl,
+        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Cyl,
+        #                              cfg_pickle_Cole_Cyl, cfg_plot_mpl)
 
-    # hmd, ff = field_map_analysis('fma_cole_cyl', cfg_data_Cole_250mm_long_cyl,
-    #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Cyl,
-    #                              cfg_pickle_Cole_Cyl, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_cole_1m_hel', cfg_data_Cole_1m_cyl,
+        #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
+        #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
 
-    # hmd, ff = field_map_analysis('fma_cole_1m_hel', cfg_data_Cole_1m_cyl,
-    #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
-    #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
-
-    # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-    #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-    #                              cfg_pickle_Mau13, cfg_plot_mpl)
+        hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
+                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+                                     cfg_pickle_Mau13_trajtest, cfg_plot_mpl)
+    # elif argv[1] == '--v':
+    #     print("Model configs imported!")
+    else:
+        pass

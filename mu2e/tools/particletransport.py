@@ -48,7 +48,9 @@ def terminate(state,time,step_no):
     radius = 700
     return ((np.sqrt(state[step_no][0]**2+state[step_no][1]**2)>radius)
             or (state[step_no][2]>12000)
-            or (state[step_no][2]<5000))
+            # or (state[step_no][2]<3000))
+            or (state[step_no][2]<4000))
+            # or (state[step_no][2]<5000))
 
 class ElectronSwimmer:
     '''Wrapper class for odespy ode solver, specifically for simulating
@@ -63,7 +65,10 @@ class ElectronSwimmer:
         self.b_field = b_field
         self.time_steps = time_steps
         self.solver = getattr(odespy,ode_method)(lorentz_force,f_args=(self.b_field,),
-                rtol=1e-12, atol=1e-12)
+                # rtol=1e-1, atol=1e-1)
+                rtol=1e-3, atol=1e-3)
+                # rtol=1e-5, atol=1e-5)
+                # rtol=1e-12, atol=1e-12)
         #print self.solver.get()
         self.solver.set_initial_condition([self.init_pos[0], self.init_pos[1], self.init_pos[2],
             self.init_v[0], self.init_v[1], self.init_v[2]])

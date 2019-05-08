@@ -7,14 +7,14 @@ from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['figure.figsize'] = 14, 10
-from fiteval import get_mag_field_function
+from mu2e.tools.fiteval import get_mag_field_function
 from time import time
 from numba import jit
 from scipy.integrate import odeint, ode
 import odespy
 
 plt.close('all')
-mag_field_function = get_mag_field_function()
+mag_field_function = get_mag_field_function('Mau13_cyl_py2')
 
 #generate a uniform cube grid, and a uniform mag field in the z direction
 x = y = np.linspace(-700,700,9)
@@ -22,8 +22,8 @@ z = np.linspace(5500,12000,9)
 xx,yy,zz = np.meshgrid(x,y,z)
 
 df = pd.DataFrame(np.array([xx,yy,zz]).reshape(3,-1).T,columns=['X','Y','Z'])
-print df
-print mag_field_function(df['X'][0],df['Y'][0],df['Z'][0],cart=True)
+print (df)
+print (mag_field_function(df['X'][0],df['Y'][0],df['Z'][0],cart=True))
 df['Bx'],df['By'],df['Bz']= zip(*df.apply(lambda row: mag_field_function(row['X'],row['Y'],row['Z'],cart=True),axis=1))
 
 #load the field into a dataframe
@@ -41,8 +41,9 @@ ax = fig.gca(projection='3d')
 ax.set_xlabel('Z (length)')
 ax.set_ylabel('X (length)')
 ax.set_zlabel('Y (length)')
-ax.quiver(qzz,qxx,qyy, qbzz,qbxx,qbyy, length=400,linewidths=(2,),arrow_length_ratio=0.2,alpha=0.6,colors='r')
+ax.quiver(qzz,qxx,qyy, qbzz,qbxx,qbyy, length=40,linewidths=(2,),arrow_length_ratio=0.2,alpha=0.6,colors='r')
 plt.show()
+input()
 
 #now lets assume we have an electron v = 1 unit/s in z dir
 #it starts at 0,0,0
@@ -110,15 +111,16 @@ path_x = [pos[0]]
 path_y = [pos[1]]
 path_z = [pos[2]]
 path = [pos]
-dt = 5e-13
+dt = 5e-10
 total_time = 0
 #while (x[0]<=pos[0]<=x[-1] and y[0]<=pos[1]<=y[-1] and z[0]<=pos[2]<=z[-1] and total_time<1e12):
 start_time=time()
-#while (x[0]<=pos[0]<=x[-1] and y[0]<=pos[1]<=y[-1] and z[0]<=pos[2]<=z[-1] and total_time<dt*1e5):
-#    pos,v = update_kinematics(pos,v,dt)
-#    path.append(pos)
-#    total_time+=dt
-#print total_time
+while (x[0]<=pos[0]<=x[-1] and y[0]<=pos[1]<=y[-1] and z[0]<=pos[2]<=z[-1] and total_time<dt*1e5):
+    pos,v = update_kinematics(pos,v,dt)
+    path.append(pos)
+    total_time+=dt
+print(total_time)
+input()
 t_steps = np.linspace(0,4e-8,1e5)
 init_state = [init_pos[0],init_pos[1],init_pos[2],init_v[0],init_v[1],init_v[2]]
 #X = odeint(lorentz_force,init_state,t)
@@ -139,13 +141,13 @@ ax.set_title('Path of electron through magnetic field')
 # these are matplotlib.patch.Patch properties
 textstr = 'init pos={0}\ninit mom={1} (MeV)\nB={2}'.format(init_pos, init_mom, 'ideal DS field map')
 props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-print 'init_E', gamma(init_v)*0.511, 'MeV'
+print ('init_E', gamma(init_v)*0.511, 'MeV')
 #print 'final_E', gamma(v)*0.511, 'MeV'
-print 'final_E', gamma(v_final)*0.511, 'MeV'
+print ('final_E', gamma(v_final)*0.511, 'MeV')
 #print 'energy diff', gamma(v)*0.511 - gamma(init_v)*0.511, 'MeV'
-print 'energy diff', gamma(v_final)*0.511 - gamma(init_v)*0.511, 'MeV'
+print ('energy diff', gamma(v_final)*0.511 - gamma(init_v)*0.511, 'MeV')
 
 # place a text box in upper left in axes coords
 ax.text2D(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,verticalalignment='top', bbox=props)
 plt.show()
-plt.savefig('../plots/anim/electron_path_DS.pdf')
+# plt.savefig('../plots/anim/electron_path_DS.pdf')
