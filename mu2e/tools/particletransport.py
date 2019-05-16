@@ -55,7 +55,7 @@ def terminate(state,time,step_no):
 class ElectronSwimmer:
     '''Wrapper class for odespy ode solver, specifically for simulating
     the path of an electron moving through the DS magnetic field.'''
-    def __init__(self, init_mom, init_pos, b_field, time_steps, ode_method):
+    def __init__(self, init_mom, init_pos, b_field, time_steps, ode_method,rtol=1e-3,atol=1e-3):
         '''Give an electron initial momentum and position, b_field function, time_steps, and ode.
         Momentum must be in units of MeV, position must be in mm'''
 
@@ -65,8 +65,9 @@ class ElectronSwimmer:
         self.b_field = b_field
         self.time_steps = time_steps
         self.solver = getattr(odespy,ode_method)(lorentz_force,f_args=(self.b_field,),
+                rtol=rtol, atol=atol)
                 # rtol=1e-1, atol=1e-1)
-                rtol=1e-3, atol=1e-3)
+                # rtol=1e-3, atol=1e-3)
                 # rtol=1e-5, atol=1e-5)
                 # rtol=1e-12, atol=1e-12)
         #print self.solver.get()
