@@ -43,6 +43,9 @@ path_Cole_1m_cyl = mu2e_ext_path +\
 cfg_data_DS_Mau13        = cfg_data('Mau13', 'DS', path_DS_Mau13,
                                     ('Z>4.200', 'Z<13.900', 'R!=0'))
 
+cfg_data_DS_Mau13_flat        = cfg_data('Mau13', 'DS', path_DS_Mau13,
+                                    ('Z>8.19', 'Z<13.10', 'R!=0'))
+
 cfg_data_Cole_250mm_short_cyl  = cfg_data('Cole', 'DS', path_Cole_250mm_short_cyl,
                                           ('Z>-1.6', 'Z<1.6', 'R!=0'))
 
@@ -86,6 +89,8 @@ r_steps_1m_true_hg = (piall_1m_hg,)*64
 
 # For all maps
 phi_steps_8 = (0, 0.463648, np.pi/4, 1.107149, np.pi/2, 2.034444, 3*np.pi/4, 2.677945)
+phi_steps_4 = (0, np.pi/4, np.pi/2, 3*np.pi/4)
+phi_steps_2 = (0, np.pi/2)
 phi_steps_true = (0, np.pi/8, np.pi/4, 3*np.pi/8, np.pi/2, 5*np.pi/8, 3*np.pi/4, 7*np.pi/8)
 phi_steps_true_hg = [0., 0.0491, 0.0982, 0.1473, 0.1963, 0.2454, 0.2945, 0.3436,
                      0.3927, 0.4418, 0.4909, 0.54, 0.589, 0.6381, 0.6872, 0.7363,
@@ -98,11 +103,38 @@ phi_steps_true_hg = [0., 0.0491, 0.0982, 0.1473, 0.1963, 0.2454, 0.2945, 0.3436,
 
 
 z_steps_DS_long = [i/1000 for i in range(4221, 13921, 50)]
+z_steps_DS_flat = [i/1000 for i in range(8221, 12996, 50)]
+z_steps_DS_flat_sparsez = [i/1000 for i in range(8221, 12996, 500)]
 z_steps_cole_small = [i/1000 for i in range(-1500, 1500, 50)]
 z_steps_cole_hg = [i/1000 for i in range(-1500, 1500, 25)]
 
 # Actual configs
 cfg_geom_cyl_800mm_long         = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_flat         = cfg_geom('cyl', z_steps_DS_flat, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_flat_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_flat_sparsephi         = cfg_geom('cyl', z_steps_DS_flat, r_steps_800mm, phi_steps_4,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_flat_sparsephi_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_4,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_flat_sparserphi_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_2,
                                            x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False], interpolate=False,
                                            do2pi=False)
@@ -144,8 +176,44 @@ cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
                                                  length1=10, ms_c1=50, ns_c1=4,
                                                  length2=0, ms_c2=0, ns_c2=0,
+                                                 ks_dict={'k3': 10000},
+                                                 bs_tuples=((1., 0, 7.873),
+                                                            (1., 0, 13.389)),
+                                                 bs_bounds=(0.1, 0.1, 5),
+                                                 version=1000)
+                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
+                                                 # bs_bounds=None, version=1000)
+
+cfg_params_DS_Mau13_5m                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+                                                 pitch2=0, ms_h2=0, ns_h2=0,
+                                                 length1=5, ms_c1=50, ns_c1=4,
+                                                 length2=0, ms_c2=0, ns_c2=0,
                                                  ks_dict={'k3': 10000}, bs_tuples=None,
                                                  bs_bounds=None, version=1000)
+
+cfg_pickle_Mau13_flat                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_bs_endsonly_flat_10_50_4',
+                                                 save_name='Mau13_bs_endsonly_flat_10_50_4', recreate=False)
+
+cfg_pickle_Mau13_flat_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_flat_sparsez_10_50_4',
+                                                 save_name='Mau13_flat_sparsez_10_50_4', recreate=False)
+
+cfg_pickle_Mau13_flat_sparsephi                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_flat_sparsephi_10_50_4',
+                                                 save_name='Mau13_flat_sparsephi_10_50_4', recreate=False)
+
+cfg_pickle_Mau13_flat_sparsephi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_flat_sparsephi_sparsez_10_50_4',
+                                                 save_name='Mau13_flat_sparsephi_sparsez_10_50_4', recreate=False)
+
+cfg_pickle_Mau13_flat_sparsephi_sparsez_5m                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_flat_sparsephi_sparsez_05_50_4',
+                                                 save_name='Mau13_flat_sparsephi_sparsez_05_50_4', recreate=False)
+
+cfg_pickle_Mau13_flat_sparserphi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_flat_sparserphi_sparsez_10_50_4',
+                                                 save_name='Mau13_flat_sparserphi_sparsez_10_50_4', recreate=False)
 
 cfg_pickle_Mau13_trajtest                    = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13traj',
@@ -234,9 +302,39 @@ if __name__ == "__main__":
         #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
         #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
 
-        hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-                                     cfg_pickle_Mau13_trajtest, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_trajtest, cfg_plot_mpl)
+
+        ### FLAT REGION DS TESTS ####
+        hmd, ff = field_map_analysis('fma_mau13_flat', cfg_data_DS_Mau13_flat,
+                                     # cfg_geom_cyl_800mm_flat, cfg_params_DS_Mau13_5m,
+                                     cfg_geom_cyl_800mm_flat, cfg_params_DS_Mau13,
+                                     cfg_pickle_Mau13_flat, cfg_plot_mpl)
+
+        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsez', cfg_data_DS_Mau13_flat,
+        #                              cfg_geom_cyl_800mm_flat_sparsez, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_flat_sparsez, cfg_plot_mpl)
+
+        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi', cfg_data_DS_Mau13_flat,
+        #                              cfg_geom_cyl_800mm_flat_sparsephi, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_flat_sparsephi, cfg_plot_mpl)
+
+        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi_sparsez', cfg_data_DS_Mau13_flat,
+        #                              cfg_geom_cyl_800mm_flat_sparsephi_sparsez, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_flat_sparsephi_sparsez, cfg_plot_mpl)
+
+        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi_sparsez_5mlength', cfg_data_DS_Mau13_flat,
+        #                              cfg_geom_cyl_800mm_flat_sparsephi_sparsez, cfg_params_DS_Mau13_5m,
+        #                              cfg_pickle_Mau13_flat_sparsephi_sparsez_5m, cfg_plot_mpl)
+
+
+
+        # hmd, ff = field_map_analysis('fma_mau13_flat_sparserphi_sparsez', cfg_data_DS_Mau13_flat,
+        #                              cfg_geom_cyl_800mm_flat_sparserphi_sparsez, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_flat_sparserphi_sparsez, cfg_plot_mpl)
+
+
     # elif argv[1] == '--v':
     #     print("Model configs imported!")
     else:
