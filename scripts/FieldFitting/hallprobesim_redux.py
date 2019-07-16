@@ -61,6 +61,8 @@ cfg_data_Cole_250mm_long_cyl_hg = cfg_data('Cole', 'DS', path_Cole_250mm_long_cy
 # the geom cfgs #
 #################
 # For cartesian DS
+# FIX THESE. THEY ARE OFF. SHOULD BE BASED ON THE FOLLOWING R:
+# 0.047, 0.319, 0.487, 0.655, 0.798
 pi8r_800mm = [0.05590169944, 0.16770509831, 0.33541019663, 0.55901699437, 0.78262379213]
 pi4r_800mm = [0.03535533906, 0.1767766953, 0.35355339059, 0.53033008589, 0.81317279836]
 pi2r_800mm = [0.025, 0.175, 0.375, 0.525, 0.800]
