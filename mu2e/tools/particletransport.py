@@ -49,7 +49,8 @@ def terminate(state,time,step_no):
     return ((np.sqrt(state[step_no][0]**2+state[step_no][1]**2)>radius)
             or (state[step_no][2]>12000)
             # or (state[step_no][2]<3000))
-            or (state[step_no][2]<4000))
+            or (state[step_no][2]<3250))
+            # or (state[step_no][2]<4000))
             # or (state[step_no][2]<5000))
 
 class ElectronSwimmer:

@@ -59,7 +59,8 @@ import plotly.graph_objs as go
 from mpldatacursor import datacursor
 import ipywidgets as widgets
 from IPython.display import display
-from plotly.widgets import GraphWidget
+# from plotly.widgets import GraphWidget
+from chart_studio.widgets import GraphWidget
 from plotly.offline import init_notebook_mode, iplot, plot
 from six.moves import range
 from six.moves import zip
