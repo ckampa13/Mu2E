@@ -122,8 +122,10 @@ class DataFrameMaker(object):
 
         elif 'Mau10' in self.field_map_version:
             self.data_frame = pd.read_csv(
-                self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
-                skiprows=8)
+                self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
+                skiprows=6)
+                # self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
+                # skiprows=8)
 
         elif 'GA01' in self.field_map_version:
             self.data_frame = pd.read_csv(
@@ -257,6 +259,9 @@ class DataFrameMaker(object):
             self.data_frame.eval('X = X/1000', inplace=True)
             self.data_frame.eval('Y = Y/1000', inplace=True)
             self.data_frame.eval('Z = Z/1000', inplace=True)
+            self.data_frame.eval('Bx = Bx*10000', inplace=True)
+            self.data_frame.eval('By = By*10000', inplace=True)
+            self.data_frame.eval('Bz = Bz*10000', inplace=True)
 
         # Offset x-axis
         if offset:
@@ -266,7 +271,8 @@ class DataFrameMaker(object):
             # Generate radial position column
             # self.data_frame.loc[:, 'R'] = rt.apply_make_r(self.data_frame['X'].values,
             #                                               self.data_frame['Y'].values)
-            self.data_frame.eval('R = sqrt(A**2+B**2)', inplace=True)
+            # self.data_frame.eval('R = sqrt(A**2+B**2)', inplace=True)
+            self.data_frame.eval('R = sqrt(X**2+Y**2)', inplace=True)
 
             # Generate negative Y-axis values for some hard-coded versions.
             if (any([vers in self.field_map_version for vers in ['Mau9', 'Mau10', 'GA01']]) and
@@ -290,7 +296,8 @@ class DataFrameMaker(object):
             # self.data_frame.loc[:, 'Br'] = rt.apply_make_br(self.data_frame['Phi'].values,
             #                                                 self.data_frame['Bx'].values,
             #                                                 self.data_frame['By'].values)
-            self.data_frame.query('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
+            self.data_frame.eval('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
+            # self.data_frame.query('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
         elif reverse and not descale:
             # self.data_frame.Phi = self.data_frame.Phi-np.pi
             self.data_frame.eval('X = R*cos(Phi)', inplace=True)
@@ -636,14 +643,25 @@ if __name__ == "__main__":
     #     input_type='csv', field_map_version='Mau13')
     # data_maker.do_basic_modifications(-3.896, descale=True)
 
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_r250mm_p10cm_lengthx10_1232173pts_09-07_160736',
-        input_type='pkl', field_map_version='Cole_1m_hg',
-        header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    data_maker.do_basic_modifications(descale=True, reverse=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_r250mm_p10cm_lengthx10_1232173pts_09-07_160736',
+    #     input_type='pkl', field_map_version='Cole_1m_hg',
+    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
+    # data_maker.do_basic_modifications(descale=True, reverse=True)
 
-    # data_maker.make_dump()
+    # DS_OFF, TS_and_PS_OFF
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'datafiles/Mau10/DS_OFF/DS_OFF_Mu2e_DSMap',
+        input_type='csv', field_map_version='Mau10')
+    data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/Mau10/TS_and_PS_OFF/TS_and_PS_OFF_Mu2e_DSMap',
+    #     input_type='csv', field_map_version='Mau10')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    data_maker.make_dump()
     # data_maker.make_dump('_noOffset')
-    data_maker.make_dump('_FIXED')
+    # data_maker.make_dump('_FIXED')
     print(data_maker.data_frame.head())
     print(data_maker.data_frame.tail())

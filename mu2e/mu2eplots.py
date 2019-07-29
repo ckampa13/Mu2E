@@ -131,7 +131,7 @@ def mu2e_plot(df, x, y, conditions=None, mode='mpl', info=None, savename=None, a
 
 def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=None, save_name=None,
                 df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, ax=None,
-                do_title=True, title_simp=None, do2pi=False, units='mm'):
+                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True):
     """Generate 3D plots, x and y vs z.
 
     Generate a 3D surface plot for a given DF and three columns. An optional selection string is
@@ -461,21 +461,22 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
         fig = go.Figure(data=lines, layout=layout)
 
         # Generate Plot
-        if mode == 'plotly_nb':
-            init_notebook_mode()
-            iplot(fig)
-            return fig
-        elif mode == 'plotly_html_img':
-            if save_dir:
-                plot(fig, filename=save_dir+'/'+save_name+'.html', image='jpeg',
-                     image_filename=save_name)
-            else:
-                plot(fig)
-        elif mode == 'plotly_html':
-            if save_dir:
-                plot(fig, filename=save_dir+'/'+save_name+'.html', auto_open=False)
-            else:
-                plot(fig)
+        if show_plot:
+            if mode == 'plotly_nb':
+                init_notebook_mode()
+                iplot(fig)
+                return fig
+            elif mode == 'plotly_html_img':
+                if save_dir:
+                    plot(fig, filename=save_dir+'/'+save_name+'.html', image='jpeg',
+                         image_filename=save_name)
+                else:
+                    plot(fig)
+            elif mode == 'plotly_html':
+                if save_dir:
+                    plot(fig, filename=save_dir+'/'+save_name+'.html', auto_open=False)
+                else:
+                    plot(fig)
 
     # return save_name
     return fig
