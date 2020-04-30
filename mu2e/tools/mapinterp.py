@@ -7,13 +7,17 @@ from mu2e import mu2e_ext_path
 from mu2e.dataframeprod import DataFrameMaker
 
 
-def get_df_interp_func(df=None,filename="datafiles/Mau13/Mu2e_DSMap_V13", method="linear",input_type='pkl',ck=True):
+def get_df_interp_func(df=None,filename="datafiles/Mau13/Mu2e_DSMap_V13", method="linear",input_type='pkl',ck=True, gauss=True):
     '''
     This factory function will return an interpolating function for any field map. An input x,y,z will output the corresponding Bx,By,Bz or Br,Bphi,Bz. Will decide later if linear interpolation is good enough.
     '''
     # load dataframe if not passed in
     if df is None:
         df = DataFrameMaker(mu2e_ext_path+"datafiles/Mau13/Mu2e_DSMap_V13", input_type=input_type).data_frame
+    if not gauss:
+        df["Bx"] = df["Bx"] / 1e4
+        df["By"] = df["By"] / 1e4
+        df["Bz"] = df["Bz"] / 1e4
 
     xs = df.X.unique()
     ys = df.Y.unique()
@@ -57,8 +61,9 @@ def get_df_interp_func(df=None,filename="datafiles/Mau13/Mu2e_DSMap_V13", method
         return c0 * (1 - zd) + c1 * zd
 
 
-    def ck_interp(x,y,z,cart=True):
-        cube = get_cube(x,y,z)
+    # def ck_interp(x,y,z,cart=True):
+    def ck_interp(p_vec):
+        cube = get_cube(*p_vec)
 
         xx = np.unique(cube[:,0])
         yy = np.unique(cube[:,1])
@@ -68,9 +73,9 @@ def get_df_interp_func(df=None,filename="datafiles/Mau13/Mu2e_DSMap_V13", method
         bys_grid = cube[:,4].reshape((2,2,2))
         bzs_grid = cube[:,5].reshape((2,2,2))
 
-        xd = (x-xx[0])/(xx[1]-xx[0])
-        yd = (y-yy[0])/(yy[1]-yy[0])
-        zd = (z-zz[0])/(zz[1]-zz[0])
+        xd = (p_vec[0]-xx[0])/(xx[1]-xx[0])
+        yd = (p_vec[1]-yy[0])/(yy[1]-yy[0])
+        zd = (p_vec[2]-zz[0])/(zz[1]-zz[0])
 
         bx = ck_interp_single(xd,yd,zd, bxs_grid)
         by = ck_interp_single(xd,yd,zd, bys_grid)
