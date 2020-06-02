@@ -26,7 +26,8 @@ syst_set = 20
 #################
 path_PS_Mau10       = mu2e_ext_path+'datafiles/Mau10/Standard_Maps/Mu2e_PSMap'
 path_DS_Mau10       = mu2e_ext_path+'datafiles/Mau10/Standard_Maps/Mu2e_DSMap'
-path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
+# path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
+path_DS_Mau13       = mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13'
 path_DSoffset_Mau10 = mu2e_ext_path+'datafiles/Mau10/Standard_Maps/Mu2e_DSMap_8mmOffset'
 path_DS_GA05        = mu2e_ext_path+'datafiles/FieldMapsGA05/DSMap'
 path_DSoffset_GA05  = mu2e_ext_path+'datafiles/FieldMapsGA05/DSMap_offset8mm'

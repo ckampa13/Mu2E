@@ -26,7 +26,8 @@ cfg_pickle = namedtuple('cfg_pickle', 'use_pickle save_pickle load_name save_nam
 # the data cfgs #
 #################
 
-path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
+# path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
+path_DS_Mau13       = mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13'
 
 path_Cole_250mm_short_cyl = mu2e_ext_path +\
     'datafiles/FieldMapsCole/high_granularity_bfield_map_cylin_r250mm_p10cm_3846784pts_10-09_085027'
@@ -211,13 +212,33 @@ cfg_plot_plotly_high_lim = cfg_plot('plotly', [-10, 10], 'html', None)
 ##############################
 cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
+                                                 # length1=10, ms_c1=50, ns_c1=4,
+                                                 length1=9.7, ms_c1=50, ns_c1=8,
+                                                 length2=0, ms_c2=0, ns_c2=0,
+                                                 ks_dict={'k3': 10000},
+                                                 bs_tuples=((1., 0, 7.873),
+                                                            (1., 0, 13.389)),
+                                                 bs_bounds=(0.1, 0.1, 5),
+                                                 version=1000)
+                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
+                                                 # bs_bounds=None, version=1000)
+
+cfg_params_DS_Mau13_cyl_hel_bs      = cfg_params(pitch1=1., ms_h1=2, ns_h1=3,
+                                                 pitch2=0, ms_h2=0, ns_h2=0,
+                                                 # length1=0, ms_c1=0, ns_c1=0,
                                                  length1=10, ms_c1=50, ns_c1=4,
                                                  length2=0, ms_c2=0, ns_c2=0,
-                                                 # ks_dict={'k3': 10000},
-                                                 # bs_tuples=((1., 0, 7.873),
-                                                 #            (1., 0, 13.389)),
-                                                 # bs_bounds=(0.1, 0.1, 5),
-                                                 # version=1000)
+                                                 ks_dict={'k3': 10000},
+                                                 bs_tuples=((1., 0, 7.873),
+                                                            (1., 0, 13.389)),
+                                                 bs_bounds=(0.1, 0.1, 5),
+                                                 version=1000)
+
+cfg_params_DS_Mau13_test            = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+                                                 pitch2=0, ms_h2=0, ns_h2=0,
+                                                 # length1=10, ms_c1=50, ns_c1=4,
+                                                 length1=10, ms_c1=10, ns_c1=1,
+                                                 length2=0, ms_c2=0, ns_c2=0,
                                                  ks_dict={'k3': 10000}, bs_tuples=None,
                                                  bs_bounds=None, version=1000)
 
@@ -285,6 +306,10 @@ cfg_pickle_Mau13_trajtest                    = cfg_pickle(use_pickle=False, save
                                                  load_name='Mau13traj',
                                                  save_name='Mau13traj', recreate=False)
 
+cfg_pickle_Mau13_test                    = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_test',
+                                                 save_name='Mau13_test', recreate=False)
+
 # cfg_params_DS_Mau13                 = cfg_params(pitch1=13, ms_h1=50, ns_h1=4,
 #                                                  pitch2=0, ms_h2=0, ns_h2=0,
 #                                                  length1=0, ms_c1=0, ns_c1=0,
@@ -295,6 +320,10 @@ cfg_pickle_Mau13_trajtest                    = cfg_pickle(use_pickle=False, save
 cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13',
                                                  save_name='Mau13', recreate=False)
+
+cfg_pickle_Mau13_cyl_hel_bs         = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_cyl_hel_bs',
+                                                 save_name='Mau13_cyl_hel_bs', recreate=False)
 
 cfg_params_Cole_Hel                 = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
@@ -368,9 +397,22 @@ if __name__ == "__main__":
         #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
         #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
 
-        # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_trajtest, cfg_plot_mpl)
+        # GOOD FITTER
+        # cyl only
+        hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
+                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+                                     cfg_pickle_Mau13, cfg_plot_mpl)
+
+        # cyl + hel
+        # hmd, ff = field_map_analysis('fma_mau13_cyl_hel_bs', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_cyl_hel_bs,
+        #                              cfg_pickle_Mau13_cyl_hel_bs, cfg_plot_mpl)
+
+
+        # TESTER
+        # hmd, ff = field_map_analysis('fma_mau13_test', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_test,
+        #                              cfg_pickle_Mau13_test, cfg_plot_mpl)
 
         ### FLAT REGION DS TESTS ####
         # hmd, ff = field_map_analysis('fma_mau13_flat', cfg_data_DS_Mau13_flat,
@@ -416,9 +458,9 @@ if __name__ == "__main__":
         #                              cfg_geom_cyl_800mm_graded_sparsephi_sparsez, cfg_params_DS_Mau13,
         #                              cfg_pickle_Mau13_graded_sparsephi_sparsez_5m, cfg_plot_mpl)
 
-        hmd, ff = field_map_analysis('fma_mau13_graded_sparserphi_sparsez', cfg_data_DS_Mau13_graded,
-                                     cfg_geom_cyl_800mm_graded_sparserphi_sparsez, cfg_params_DS_Mau13,
-                                     cfg_pickle_Mau13_graded_sparserphi_sparsez, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_mau13_graded_sparserphi_sparsez', cfg_data_DS_Mau13_graded,
+        #                              cfg_geom_cyl_800mm_graded_sparserphi_sparsez, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_graded_sparserphi_sparsez, cfg_plot_mpl)
 
     # elif argv[1] == '--v':
     #     print("Model configs imported!")

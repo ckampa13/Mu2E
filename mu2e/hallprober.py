@@ -92,7 +92,7 @@ from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
 interp_studies = imp.load_source(
-    'interp_studies', '/home/ckampa/Coding/Mu2E/scripts/FieldFitting/interp_studies.py')
+    'interp_studies', '/home/ckampa/coding/Mu2E/scripts/FieldFitting/interp_studies.py')
 
 warnings.simplefilter('always', DeprecationWarning)
 
@@ -625,7 +625,8 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         hpg.bad_calibration(measure=False, position=False, rotation=True, seed=seed)
 
     hall_measure_data = hpg.sparse_field
-    # print hall_measure_data.head()
+    print(hall_measure_data.head())
+    print(hall_measure_data.columns)
     # raw_input()
 
     ff = FieldFitter(hall_measure_data, cfg_geom)
