@@ -60,7 +60,7 @@ from mpldatacursor import datacursor
 import ipywidgets as widgets
 from IPython.display import display
 # from plotly.widgets import GraphWidget
-from chart_studio.widgets import GraphWidget
+# from chart_studio.widgets import GraphWidget
 from plotly.offline import init_notebook_mode, iplot, plot
 from six.moves import range
 from six.moves import zip
@@ -252,8 +252,8 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
                           fontsize=20)
         if ptype.lower() == '3d':
             ax.view_init(elev=35., azim=30)
-        # if save_dir:
-        #     plt.savefig(save_dir+'/'+save_name+'.png')
+        if save_dir:
+            plt.savefig(save_dir+'/'+save_name+'.png')
 
         if df_fit:
             ax2 = fig.add_subplot(1, 2, 2)
@@ -812,10 +812,12 @@ def mu2e_plot3d_ptrap_anim(df_group1, x, y, z, df_xray, df_group2=None, color=No
     p_slider.on_trait_change(p_state.on_time_change, 'value')
 
     fig = go.Figure(data=scats, layout=layout)
-    g = GraphWidget('https://plot.ly/~BroverCleveland/70/')
-    display(g)
-    display(p_slider)
-    return g, fig
+    # FIXME!
+    # g = GraphWidget('https://plot.ly/~BroverCleveland/70/')
+    # display(g)
+    # display(p_slider)
+    # return g, fig
+    return fig
 
 
 def ptrap_layout(title=None, x='Z', y='X', z='Y', x_range=(3700, 17500), y_range=(-1000, 1000),

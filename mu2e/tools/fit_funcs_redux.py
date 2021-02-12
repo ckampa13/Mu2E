@@ -36,6 +36,8 @@ import mpmath
 import six
 from six.moves import range, zip
 
+guvec_target = 'cuda' # 'parallel'
+
 
 def pairwise(iterable):
     """s -> (s0,s1), (s2,s3), (s4, s5), ..."""
@@ -711,7 +713,7 @@ def brzphi_3d_producer_modbessel_phase_hybrid_disp(z, r, phi, rp, phip, L, ns, m
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:])"],
                  '(m), (m), (m), (), (), (), (), (m), (m), ()->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields_mb(z, phi, r, n, A, B, D, ivp, iv, kms_i, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
             model_r[i] += np.cos(n[0]*phi[i]-D[0])*ivp[i]*kms_i[0] * \
@@ -725,7 +727,7 @@ def brzphi_3d_producer_modbessel_phase_hybrid_disp(z, r, phi, rp, phip, L, ns, m
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:], float64[:])"],
                  '(m), (m), (m), (), (), (), (), (m), (m), ()->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields_b(z, phi, r, n, E, F, G, jvp, jv, kms_j, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
             model_r[i] += np.cos(n[0]*phi[i]-G[0])*jvp[i]*kms_j[0] * \
@@ -823,7 +825,7 @@ def brzphi_3d_producer_modbessel_phase_hybrid_disp2(z, r, phi, rp, phip, L, ns, 
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:])"],
                  '(m), (m), (m), (), (), (), (), (m), (m), ()->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields_mb(z, phi, r, n, A, B, D, ivp, iv, kms_i, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
             model_r[i] += np.cos(n[0]*phi[i]-D[0])*ivp[i]*kms_i[0] * \
@@ -926,7 +928,7 @@ def brzphi_3d_producer_modbessel_phase_hybrid_disp3(z, r, phi, rp, phip, L, ns, 
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:])"],
                  '(m), (m), (m), (), (), (), (), (m), (m), ()->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields_mb(z, phi, r, n, A, B, D, ivp, iv, kms_i, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
             model_r[i] += np.cos(n[0]*phi[i]-D[0])*ivp[i]*kms_i[0] * \
@@ -1004,7 +1006,7 @@ def brzphi_3d_producer_bessel(z, r, phi, R, ns, ms):
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:], float64[:])"],
                  '(m), (m), (m), (), (), (), (), (), (m), (m), ()->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields(z, phi, r, n, A, B, C, D, jvp, jv, kms, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
             model_r[i] += (C[0]*np.cos(n[0]*phi[i])+D[0]*np.sin(n[0]*phi[i]))*jvp[i]*kms[0] * \
@@ -1083,7 +1085,7 @@ def brzphi_3d_producer_bessel_hybrid(z, r, phi, R, ns, ms):
                   "float64[:], float64[:], float64[:], float64[:], float64[:], float64[:],"
                   "float64[:])"],
                  '(m), (m), (m), (), (), (), (), (), (), (), (m), (m), (m), (m), (), ()'
-                 '->(m), (m), (m)', nopython=True, target='parallel')
+                 '->(m), (m), (m)', nopython=True, target=guvec_target)
     def calc_b_fields(z, phi, r, n, A, B, C, D, E, F, ivp, iv, jvp, jv,
                       kms_i, kms_j, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
@@ -1153,7 +1155,7 @@ def brzphi_3d_producer_profile(z, r, phi, R, ns, ms):
     @guvectorize(["void(float64[:], float64[:], int64[:], float64[:], float64[:], float64[:],"
                   "float64[:], float64[:], float64[:], float64[:])"],
                  '(m), (m), (), (), (), (), (), (m), ()->(m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def numba_parallel_model_r_calc(z, phi, n, A, B, C, D, ivp, kms, model_r):
         for i in range(z.shape[0]):
             model_r[i] += (C[0]*np.cos(n[0]*phi[i])+D[0]*np.sin(n[0]*phi[i]))*ivp[i]*kms[0] * \
@@ -1242,7 +1244,7 @@ def brzphi_3d_producer_hel_v0(z, r, phi, L, ns, ms):
                   "float64[:], float64[:], float64[:], float64[:],"
                   "float64[:], float64[:], float64[:])"],
                  '(m), (m), (m), (), (), (), (), (), (), (), (m), (m), (m), (m)->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields(z, phi, r, P, m, n, A, B, C, D,
                       iv1, iv2, ivp1, ivp2, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
@@ -1417,7 +1419,7 @@ def brzphi_3d_producer_hel_v16(z, r, phi, L, ns, ms, n_scale):
                   "float64[:], float64[:], float64[:],"
                   "float64[:], float64[:])"],
                  '(m), (m), (m), (), (), (), (), (), (), (m), (m)->(m), (m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields(z, phi, r, P, m, n, scale, A, B,
                       iv1, ivp1, model_r, model_z, model_phi):
         for i in range(z.shape[0]):
@@ -1438,7 +1440,7 @@ def brzphi_3d_producer_hel_v16(z, r, phi, L, ns, ms, n_scale):
                   "float64[:], float64[:], float64[:], float64[:],"
                   "float64[:], float64[:])"],
                  '(m), (m), (m), (m), (), (), (), (), (), (), (), ()->(m), (m)',
-                 nopython=True, target='parallel')
+                 nopython=True, target=guvec_target)
     def calc_b_fields_cart(x, y, z, phi, xp1, yp1, zp1, xp2, yp2, zp2, k1, k2,
                            model_r, model_phi):
         for i in range(z.shape[0]):

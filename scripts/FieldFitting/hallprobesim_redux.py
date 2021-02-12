@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from mu2e.hallprober import field_map_analysis
 from collections import namedtuple
 import numpy as np
+import pandas as pd
 from mu2e import mu2e_ext_path
 from mu2e.src.make_csv import make_csv
 from six.moves import range
@@ -28,6 +29,7 @@ cfg_pickle = namedtuple('cfg_pickle', 'use_pickle save_pickle load_name save_nam
 
 # path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
 path_DS_Mau13       = mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13'
+path_DS_Mau13_coilshift       = mu2e_ext_path+'Bmaps/DSMap_coilshift'
 
 path_Cole_250mm_short_cyl = mu2e_ext_path +\
     'datafiles/FieldMapsCole/high_granularity_bfield_map_cylin_r250mm_p10cm_3846784pts_10-09_085027'
@@ -43,6 +45,9 @@ path_Cole_1m_cyl = mu2e_ext_path +\
 
 cfg_data_DS_Mau13        = cfg_data('Mau13', 'DS', path_DS_Mau13,
                                     ('Z>4.200', 'Z<13.900', 'R!=0'))
+
+cfg_data_DS_Mau13_coilshift   = cfg_data('Mau13', 'DS', path_DS_Mau13_coilshift,
+                                         ('Z>4.200', 'Z<13.900', 'R!=0'))
 
 cfg_data_DS_Mau13_flat        = cfg_data('Mau13', 'DS', path_DS_Mau13,
                                     ('Z>8.19', 'Z<13.10', 'R!=0'))
@@ -109,6 +114,9 @@ phi_steps_true_hg = [0., 0.0491, 0.0982, 0.1473, 0.1963, 0.2454, 0.2945, 0.3436,
 
 
 z_steps_DS_long = [i/1000 for i in range(4221, 13921, 50)]
+z_steps_DS_long_sparsez = [i/1000 for i in range(4221, 13921, 100)]
+z_steps_DS_long_sparserz = [i/1000 for i in range(4221, 13921, 200)]
+z_steps_DS_long_mixz = [i/1000 for i in range(4221, 8521, 100)]+[i/1000 for i in range(8521, 13921, 200)]
 z_steps_DS_flat = [i/1000 for i in range(8221, 12996, 50)]
 z_steps_DS_flat_sparsez = [i/1000 for i in range(8221, 12996, 500)]
 z_steps_DS_graded = [i/1000 for i in range(4221, 8221, 50)]
@@ -120,6 +128,26 @@ z_steps_cole_hg = [i/1000 for i in range(-1500, 1500, 25)]
 cfg_geom_cyl_800mm_long         = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
                                            x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_long_sparsez = cfg_geom('cyl', z_steps_DS_long_sparsez, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_long_sparserz= cfg_geom('cyl', z_steps_DS_long_sparserz, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_long_mixz    = cfg_geom('cyl', z_steps_DS_long_mixz, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[False, False, False], interpolate=False,
+                                           do2pi=False)
+
+cfg_geom_cyl_800mm_long_scale_hp= cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
+                                           x_steps=None, y_steps=None,
+                                           bad_calibration=[True, False, False], interpolate=False,
                                            do2pi=False)
 
 cfg_geom_cyl_800mm_flat         = cfg_geom('cyl', z_steps_DS_flat, r_steps_800mm, phi_steps_8,
@@ -321,6 +349,35 @@ cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=T
                                                  load_name='Mau13',
                                                  save_name='Mau13', recreate=False)
 
+cfg_pickle_Mau13_sparsez            = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_sparsez',
+                                                 save_name='Mau13_sparsez', recreate=False)
+
+cfg_pickle_Mau13_sparserz           = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_sparserz',
+                                                 save_name='Mau13_sparserz', recreate=False)
+
+cfg_pickle_Mau13_mixz               = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_mixz',
+                                                 save_name='Mau13_mixz', recreate=False)
+
+cfg_pickle_Mau13_coilshift          = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_coilshift',
+                                                 save_name='Mau13_coilshift', recreate=False)
+
+# load base fit to seed Huber fit
+cfg_pickle_Mau13_Huber              = cfg_pickle(use_pickle=True, save_pickle=True,
+                                                 load_name='Mau13',
+                                                 save_name='Mau13_huber', recreate=False)
+
+cfg_pickle_Mau13_scale_hp           = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_scale_hp_bias_up',
+                                                 save_name='Mau13_scale_hp_bias_up', recreate=False)
+
+cfg_pickle_Mau13_scale_hp_rec       = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                 load_name='Mau13_scale_hp_bias_up',
+                                                 save_name='Mau13_scale_hp_bias_up', recreate=True)
+
 cfg_pickle_Mau13_cyl_hel_bs         = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13_cyl_hel_bs',
                                                  save_name='Mau13_cyl_hel_bs', recreate=False)
@@ -402,6 +459,142 @@ if __name__ == "__main__":
         hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
                                      cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
                                      cfg_pickle_Mau13, cfg_plot_mpl)
+        # sparse z steps (10cm instead of 5cm)
+        # hmd, ff = field_map_analysis('fma_mau13_sparsez', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long_sparsez, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_sparsez, cfg_plot_mpl)
+        # sparser z steps (20cm instead of 5cm)
+        # hmd, ff = field_map_analysis('fma_mau13_sparserz', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long_sparserz, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_sparserz, cfg_plot_mpl)
+        # sparse mix z steps (20cm tracker, 10cm gradient)
+        # hmd, ff = field_map_analysis('fma_mau13_mixz', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long_mixz, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_mixz, cfg_plot_mpl)
+
+        # shifted coils (Hank Glass 09-10-2020)
+        # hmd, ff = field_map_analysis('fma_mau13_coilshift', cfg_data_DS_Mau13_coilshift,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_coilshift, cfg_plot_mpl)
+
+        # Huber bias (no Hall probe errors)
+        # (TAKES WAY TOO LONG TO CONVERGE IN CURRENT SETUP) -- seed fit
+        # MUST CHANGE mu2e/fieldfitter_redux2.py to include "loss" in fcn keywords...
+        # FIXME! change this to be a parameter in a config named tuple
+        # hmd, ff = field_map_analysis('fma_mau13_huber', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_Huber, cfg_plot_mpl)
+
+        # Huber for single badly biased Hall probe
+        '''
+        sf = 1e-3# +2e-4
+        scales_lists = [[1.+sf, 1., 1., 1., 1.],
+                        [1., 1., 1.+sf, 1., 1.],]
+                        # [1., 1.+sf, 1., 1., 1.],
+                        # [1., 1., 1.+sf, 1., 1.],
+                        # [1., 1., 1., 1.+sf, 1.],
+                        # [1., 1., 1., 1., 1.+sf]]
+        # nums = [0, 1, 3, 4]
+        nums = [0,2]
+        # scales_lists = [[1.+sf, 1., 1., 1., 1.],] # whoops
+        # nums = [0] # whoops part 2
+        names = [f'Mau13_hp_{num}_bias_up' for num in nums]
+        # names = [f'Mau13_hp_{num}_bias_up_{sf:1.0E}' for num in nums]
+
+        for sfs, name in zip(scales_lists, names):
+            print(f"hallprobesim_redux: running sfs = {sfs}")
+            print(f"savenam: {name}")
+            # set up configs
+            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
+                                   x_steps=None, y_steps=None,
+                                   bad_calibration=[sfs, False, False], interpolate=False,
+                                   do2pi=False)
+
+            cfg_pickle_ = cfg_pickle(use_pickle=True, save_pickle=True,
+                                     load_name=name,
+                                     save_name=name+'_huber', recreate=False)
+            # run field_map_analysis
+            hmd, ff = field_map_analysis(f'fma_{name}_huber', cfg_data_DS_Mau13,
+                                         cfg_geom_, cfg_params_DS_Mau13,
+                                         cfg_pickle_, cfg_plot_mpl)
+        '''
+
+        # ONE HALL PROBE BIASED
+        # fit on bias data
+        # hmd, ff = field_map_analysis('fma_mau13_middle_bias_up', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long_scale_hp, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_scale_hp, cfg_plot_mpl)
+        # recreate on true data
+        # hmd, ff = field_map_analysis('fma_mau13_middle_bias_up_rec_truedata', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_scale_hp_rec, cfg_plot_mpl)
+
+        '''
+        # Run bias fit trying on each probe
+        # but not probe #3 because I did that one first
+        # scales_lists = [[1.+1e-3, 1., 1., 1., 1.],
+        #                 [1., 1.+1e-3, 1., 1., 1.],
+        #                 [1., 1., 1., 1.+1e-3, 1.],
+        #                 [1., 1., 1., 1., 1.+1e-3]]
+        sf = +2e-4
+        scales_lists = [[1.+sf, 1., 1., 1., 1.],
+                        [1., 1.+sf, 1., 1., 1.],
+                        [1., 1., 1.+sf, 1., 1.],
+                        [1., 1., 1., 1.+sf, 1.],
+                        [1., 1., 1., 1., 1.+sf]]
+        nums = [0, 1, 3, 4]
+        # scales_lists = [[1.+sf, 1., 1., 1., 1.],] # whoops
+        # nums = [0] # whoops part 2
+        # names = [f'Mau13_hp_{num}_bias_up' for num in nums]
+        names = [f'Mau13_hp_{num}_bias_up_{sf:1.0E}' for num in nums]
+
+        for sfs, name in zip(scales_lists, names):
+            print(f"hallprobesim_redux: running sfs = {sfs}")
+            print(f"savenam: {name}")
+            # set up configs
+            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
+                                   x_steps=None, y_steps=None,
+                                   bad_calibration=[sfs, False, False], interpolate=False,
+                                   do2pi=False)
+
+            cfg_pickle_ = cfg_pickle(use_pickle=False, save_pickle=True,
+                                     load_name=name,
+                                     save_name=name, recreate=False)
+            # run field_map_analysis
+            hmd, ff = field_map_analysis(f'fma_{name}', cfg_data_DS_Mau13,
+                                         cfg_geom_, cfg_params_DS_Mau13,
+                                         cfg_pickle_, cfg_plot_mpl)
+        '''
+
+
+        '''
+        # Run with 5 randomized sfs
+        subdir = 'ensemble_random_scale_factor/'
+        df_ic = pd.read_pickle('/home/ckampa/data/pickles/Mu2E/ensemble_random_scale_factor/run000_random_sfs_init_conds_df.p')
+        print('Randomized init cond DataFrame:')
+        print(df_ic.head())
+        # scales_lists = list(df_ic[[f'hp_{n}_sf' for n in range(5)]].values)
+        scales_lists = [list(i) for i in df_ic[[f'hp_{n}_sf' for n in range(5)]].values]
+        names = [f'Mau13_{row.id}' for row in df_ic.itertuples()]
+
+        for sfs, name in zip(scales_lists, names):
+            print(f"hallprobesim_redux: running sfs = {sfs}")
+            print(f"savename: {name}")
+            # set up configs
+            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
+                                   x_steps=None, y_steps=None,
+                                   bad_calibration=[sfs, False, False], interpolate=False,
+                                   do2pi=False)
+
+            cfg_pickle_ = cfg_pickle(use_pickle=False, save_pickle=True,
+                                     load_name=subdir+name,
+                                     save_name=subdir+name, recreate=False)
+            # run field_map_analysis
+            hmd, ff = field_map_analysis(subdir+f'fma_{name}', cfg_data_DS_Mau13,
+                                         cfg_geom_, cfg_params_DS_Mau13,
+                                         cfg_pickle_, cfg_plot_mpl)
+        '''
+
 
         # cyl + hel
         # hmd, ff = field_map_analysis('fma_mau13_cyl_hel_bs', cfg_data_DS_Mau13,

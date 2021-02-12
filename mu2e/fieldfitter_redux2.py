@@ -222,6 +222,7 @@ class FieldFitter:
                                                                         'gtol': 1e-10,
                                                                         'ftol': 1e-10,
                                                                         'xtol': 1e-10,
+                                                                        # 'loss': 'huber'
                                                                         })
                                        ##                                   # 'tr_solver': 'lsmr',
                                        ##                                   # 'tr_options':

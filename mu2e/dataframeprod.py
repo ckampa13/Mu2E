@@ -114,7 +114,9 @@ class DataFrameMaker(object):
 
         elif 'Mau9' in self.field_map_version:
             self.data_frame = pd.read_csv(
-                self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True)
+                self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
+                skiprows=6)
+                # self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True)
 
         elif 'Mau10' in self.field_map_version and 'rand' in self.file_name:
             self.data_frame = pd.read_csv(
@@ -650,15 +652,65 @@ if __name__ == "__main__":
     # data_maker.do_basic_modifications(descale=True, reverse=True)
 
     # DS_OFF, TS_and_PS_OFF
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'datafiles/Mau10/DS_OFF/DS_OFF_Mu2e_DSMap',
-        input_type='csv', field_map_version='Mau10')
-    data_maker.do_basic_modifications(-3.896, descale=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'datafiles/Mau10/DS_OFF/DS_OFF_Mu2e_DSMap',
+    #     input_type='csv', field_map_version='Mau10')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # Normal Mau10
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau10_DSMap',
+    #     input_type='csv', field_map_version='Mau10')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
 
     # data_maker = DataFrameMaker(
     #     mu2e_ext_path+'datafiles/Mau10/TS_and_PS_OFF/TS_and_PS_OFF_Mu2e_DSMap',
     #     input_type='csv', field_map_version='Mau10')
     # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # coil shift no bus bars
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/DSMap_coilshift',
+    #     input_type='csv', field_map_version='Mau13')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # bus bars only
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau13/DSMap_bus_only',
+    #     input_type='csv', field_map_version='Mau13_bus_only')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # coils only
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau13/DSMap_helical_windings_only',
+    #     input_type='csv', field_map_version='Mau13_helical_windings_only')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # Mau9 0.7*DS (pion degrader)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau9/DS_70Percent/Mu2e_DSMap',
+    #     input_type='csv', field_map_version='Mau9_x70')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    ## for more pion studies (prepping Mau9, Mau10, Mau12, Mau13 [already done])
+    # Mau9
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau9/Mu2e_DSMap_Mau9',
+    #     input_type='csv', field_map_version='Mau9')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # Mau10
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau10/Mu2e_DSMap_Mau10',
+    #     input_type='csv', field_map_version='Mau10')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # Mau12
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mau12/DSMap_Mau12',
+        input_type='csv', field_map_version='Mau12')
+    data_maker.do_basic_modifications(-3.896, descale=True)
+
 
     data_maker.make_dump()
     # data_maker.make_dump('_noOffset')

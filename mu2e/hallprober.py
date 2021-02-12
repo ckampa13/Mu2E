@@ -306,8 +306,13 @@ class HallProbeGenerator(object):
         """
         if seed is None:
             # measure_sf = [1-2.03e-4, 1+1.48e-4, 1-0.81e-4, 1-1.46e-4, 1-0.47e-4]
-            measure_sf = [1-2.58342250e-05, 1-5.00578244e-05, 1+4.87132812e-05, 1+7.79452585e-05,
-                          1+1.85119047e-05]  # uniform(-0.0001, 0.0001)
+            # measure_sf = [1-2.58342250e-05, 1-5.00578244e-05, 1+4.87132812e-05, 1+7.79452585e-05,
+            #               1+1.85119047e-05]  # uniform(-0.0001, 0.0001)
+            if measure == True:
+                # COLE ONE HALL PROBE BIASED BY 1e-3
+                measure_sf = [1., 1., 1. + 1e-3, 1., 1.] # middle probe bias up
+            else:
+                measure_sf = measure # pass in scale factors
             # pos_offset = [-1.5, 0.23, -0.62, 0.12, -0.18]
             pos_offset = [0.9557545, 0.7018995, -0.8877238, 0.3336723, -0.4361852]  # uniform(-1, 1)
             # rotation_angle = [ 0.00047985,  0.00011275,  0.00055975, -0.00112114,  0.00051197]
@@ -322,17 +327,19 @@ class HallProbeGenerator(object):
 
         for phi in self.phi_steps:
             probes = self.sparse_field[np.isclose(self.sparse_field.Phi, phi)].R.unique()
-            if measure:
+            # if measure:
+            if measure != False:
                 print('using measure sfs:', end=' ')
                 print(measure_sf)
                 if len(probes) > len(measure_sf):
                     raise IndexError('need more measure_sf, too many probes')
                 for i, probe in enumerate(probes):
-                    self.sparse_field.ix[
+                    # DataFrame.ix DEPRECATED
+                    self.sparse_field.loc[
                         (abs(self.sparse_field.R) == probe), 'Bz'] *= measure_sf[i]
-                    self.sparse_field.ix[
+                    self.sparse_field.loc[
                         (abs(self.sparse_field.R) == probe), 'Br'] *= measure_sf[i]
-                    self.sparse_field.ix[
+                    self.sparse_field.loc[
                         (abs(self.sparse_field.R) == probe), 'Bphi'] *= measure_sf[i]
 
             if position:
@@ -569,7 +576,7 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
                 conditions_str = ' and '.join(conditions+('Y=={}'.format(step),))
             save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                     df_fit=True, mode=plot_type, save_dir=save_dir,
-                                    do2pi=cfg_geom.do2pi)
+                                    do2pi=cfg_geom.do2pi, units='m')
 
             # If we are saving the plotly_html, we also want to download stills
             # and transfer them to the appropriate save location.
@@ -618,7 +625,8 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         seed = cfg_geom.bad_calibration[3]
 
     if cfg_geom.bad_calibration[0]:
-        hpg.bad_calibration(measure=True, position=False, rotation=False, seed=seed)
+        # hpg.bad_calibration(measure=True, position=False, rotation=False, seed=seed)
+        hpg.bad_calibration(measure=cfg_geom.bad_calibration[0], position=False, rotation=False, seed=seed)
     if cfg_geom.bad_calibration[1]:
         hpg.bad_calibration(measure=False, position=True, rotation=False, seed=seed)
     if cfg_geom.bad_calibration[2]:
