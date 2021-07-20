@@ -208,11 +208,12 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
             else:
                 fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout=True)
                 fig.set_constrained_layout_pads(hspace=0., wspace=0.15)
+                # fig.set_constrained_layout_pads(hpad=0.5, wpad=0.5, hspace=0., wspace=0.15)
 
         if df_fit:
             ax = fig.add_subplot(1, 2, 1, projection='3d')
-            ax.plot(Xi.ravel(), Yi.ravel(), Z.ravel(), 'ko', markersize=2)
-            ax.plot_wireframe(Xi, Yi, Z_fit, color='green')
+            ax.plot(Xi.ravel(), Yi.ravel(), Z.ravel(), 'ko', markersize=2, zorder=100)
+            ax.plot_wireframe(Xi, Yi, Z_fit, color='green', zorder=99)
         elif ptype.lower() == '3d':
             if not ax:
                 ax = fig.gca(projection='3d')
@@ -251,7 +252,8 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
                 plt.title('{0} vs {1} and {2} for DS\n{3}'.format(z, x, y, conditions_title),
                           fontsize=20)
         if ptype.lower() == '3d':
-            ax.view_init(elev=35., azim=30)
+            # ax.view_init(elev=35., azim=30)
+            ax.view_init(elev=30., azim=30)
         if save_dir:
             plt.savefig(save_dir+'/'+save_name+'.png')
 
@@ -277,7 +279,9 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
             ax2.set_xlabel(f'{x} ({units})', fontsize=18)
             ax2.set_ylabel(f'{y} ({units})', fontsize=18)
             # datacursor(heat, hover=True, bbox=dict(alpha=1, fc='w'))
+            ax.dist = 11 # default 10
             if save_dir:
+                # fig.tight_layout()
                 plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
 
     elif 'plotly' in mode:
