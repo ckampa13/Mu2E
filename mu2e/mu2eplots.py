@@ -164,7 +164,8 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
         Name of saved image/plot or None.
     """
 
-    _modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb']
+    # _modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb']
+    _modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb', 'plotly_html_img']
 
     if mode not in _modes:
         raise ValueError(mode+' not one of: '+', '.join(_modes))
