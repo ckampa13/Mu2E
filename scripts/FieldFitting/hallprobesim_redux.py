@@ -255,6 +255,30 @@ cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  # ks_dict={'k3': 10000}, bs_tuples=None,
                                                  # bs_bounds=None, version=1000)
 
+cfg_params_DS_Mau13_no_BS           = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+                                                 pitch2=0, ms_h2=0, ns_h2=0,
+                                                 # length1=10, ms_c1=50, ns_c1=4,
+                                                 length1=9.7, ms_c1=50, ns_c1=8,
+                                                 length2=0, ms_c2=0, ns_c2=0,
+                                                 ks_dict={'k3': 10000},
+                                                 bs_tuples=None,
+                                                 bs_bounds=None,
+                                                 version=1000)
+                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
+                                                 # bs_bounds=None, version=1000)
+
+cfg_params_DS_Mau13_cyl_hel_no_BS   = cfg_params(pitch1=1., ms_h1=2, ns_h1=3,
+                                                 pitch2=0, ms_h2=0, ns_h2=0,
+                                                 # length1=10, ms_c1=50, ns_c1=4,
+                                                 length1=9.7, ms_c1=50, ns_c1=8,
+                                                 length2=0, ms_c2=0, ns_c2=0,
+                                                 ks_dict={'k3': 10000},
+                                                 bs_tuples=None,
+                                                 bs_bounds=None,
+                                                 version=1000)
+                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
+                                                 # bs_bounds=None, version=1000)
+
 cfg_params_DS_Mau13_cyl_hel_bs      = cfg_params(pitch1=1., ms_h1=2, ns_h1=3,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
                                                  # length1=0, ms_c1=0, ns_c1=0,
@@ -352,6 +376,14 @@ cfg_pickle_Mau13_test                    = cfg_pickle(use_pickle=False, save_pic
 cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13',
                                                  save_name='Mau13', recreate=False)
+
+cfg_pickle_Mau13_no_BS              = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_no_BS',
+                                                 save_name='Mau13_no_BS', recreate=False)
+
+cfg_pickle_Mau13_cyl_hel_no_BS      = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                 load_name='Mau13_cyl_hel_no_BS',
+                                                 save_name='Mau13_cyl_hel_no_BS', recreate=False)
 
 cfg_pickle_Mau13_rec                = cfg_pickle(use_pickle=True, save_pickle=False,
                                                  load_name='Mau13',
@@ -473,6 +505,15 @@ if __name__ == "__main__":
         #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
         #                              cfg_pickle_Mau13, cfg_plot_mpl)
                                      # cfg_pickle_Mau13_rec, cfg_plot_mpl)
+        # cyl only, no BS terms
+        # hmd, ff = field_map_analysis('fma_mau13_no_BS', cfg_data_DS_Mau13,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_no_BS,
+        #                              cfg_pickle_Mau13_no_BS, cfg_plot_mpl)
+        # cyl, hel, no BS terms
+        hmd, ff = field_map_analysis('fma_mau13_cyl_hel_no_BS', cfg_data_DS_Mau13,
+                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_cyl_hel_no_BS,
+                                     cfg_pickle_Mau13_cyl_hel_no_BS, cfg_plot_mpl)
+
         #########
         ####### recreate plots
         # name = 'Mau13_mixz' # 'Mau13_sparsez'
@@ -514,9 +555,9 @@ if __name__ == "__main__":
         #                              cfg_pickle_Mau13_coilshift, cfg_plot_mpl)
 
         # shifted coils + bus
-        hmd, ff = field_map_analysis('fma_mau13_coilshift_bus', cfg_data_DS_Mau13_coilshift_bus,
-                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-                                     cfg_pickle_Mau13_coilshift_bus, cfg_plot_mpl)
+        # hmd, ff = field_map_analysis('fma_mau13_coilshift_bus', cfg_data_DS_Mau13_coilshift_bus,
+        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
+        #                              cfg_pickle_Mau13_coilshift_bus, cfg_plot_mpl)
 
         # Huber bias (no Hall probe errors)
         # (TAKES WAY TOO LONG TO CONVERGE IN CURRENT SETUP) -- seed fit

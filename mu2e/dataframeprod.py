@@ -675,10 +675,10 @@ if __name__ == "__main__":
     # data_maker.do_basic_modifications(-3.896, descale=True)
 
     # coil shift with bus bars
-    data_maker = DataFrameMaker(
-        mu2e_ext_path+'Bmaps/DSMap_coilshift_plus_bus',
-        input_type='csv', field_map_version='Mau13')
-    data_maker.do_basic_modifications(-3.896, descale=True)
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/DSMap_coilshift_plus_bus',
+    #     input_type='csv', field_map_version='Mau13')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
 
     # bus bars only
     # data_maker = DataFrameMaker(
@@ -717,8 +717,17 @@ if __name__ == "__main__":
     #     input_type='csv', field_map_version='Mau12')
     # data_maker.do_basic_modifications(-3.896, descale=True)
 
+    # Mau13 70% DS
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau13/DSMap70',
+    #     input_type='csv', field_map_version='Mau13_70')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
 
-
+    # Mau13 50% DS
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mau13/DSMap50',
+        input_type='csv', field_map_version='Mau13_50')
+    data_maker.do_basic_modifications(-3.896, descale=True)
 
     data_maker.make_dump()
     # data_maker.make_dump('_noOffset')
