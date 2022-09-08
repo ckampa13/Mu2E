@@ -24,9 +24,9 @@ Example:
         ...         r_steps = cfg_geom.r_steps, phi_steps = cfg_geom.phi_steps,
         ...         x_steps = cfg_geom.x_steps, y_steps = cfg_geom.y_steps)
 
-        In [12]: ff = FieldFitter(hpg.get_toy(), cfg_geom)
+        In [12]: ff = FieldFitter(hpg.get_toy())
 
-        In [13]: ff.fit(cfg_geom.geom, cfg_params, cfg_pickle)
+        In [13]: ff.fit(cfg_params, cfg_pickle)
         ...      # This will take some time, especially for many data points and free params
 
         In [14]: ff.merge_data_fit_res() # merge the results in for easy plotting

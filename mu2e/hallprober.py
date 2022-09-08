@@ -149,7 +149,8 @@ class HallProbeGenerator(object):
             (x1[2, :]-x2[2, :])**2)
 
     def __init__(self, input_data, z_steps=None, x_steps=None,
-                 y_steps=None, r_steps=None, phi_steps=None, interpolate=False, do2pi=False):
+                 y_steps=None, r_steps=None, phi_steps=None, interpolate=False,
+                 do2pi=False, do_selection=True):
         self.full_field = input_data
         self.sparse_field = self.full_field
         self.r_steps = r_steps
@@ -157,57 +158,62 @@ class HallProbeGenerator(object):
         self.x_steps = x_steps
         self.y_steps = y_steps
         self.phi_steps = phi_steps
-        if self.phi_steps:
-            self.phi_nphi_steps = list(self.phi_steps[:])
-            for phi in self.phi_steps:
-                if do2pi:
-                    # determine phi and phi+pi
-                    self.phi_nphi_steps.append(phi+np.pi)
-                else:
-                    # determine phi and negative phi
-                    if phi == 0:
-                        self.phi_nphi_steps.append(np.pi)
+        # modify sparse_field if necessary
+        if do_selection:
+            if self.phi_steps:
+                self.phi_nphi_steps = list(self.phi_steps[:])
+                for phi in self.phi_steps:
+                    if do2pi:
+                        # determine phi and phi+pi
+                        self.phi_nphi_steps.append(phi+np.pi)
                     else:
-                        self.phi_nphi_steps.append(phi-np.pi)
+                        # determine phi and negative phi
+                        if phi == 0:
+                            self.phi_nphi_steps.append(np.pi)
+                        else:
+                            self.phi_nphi_steps.append(phi-np.pi)
 
-        if self.x_steps or self.y_steps:
-            raise NotImplementedError('Oh no! you got lazy during refactoring')
+            if self.x_steps or self.y_steps:
+                raise NotImplementedError('Oh no! you got lazy during refactoring')
 
-        if interpolate is not False:
-            self.interpolate_points(interpolate)
+            if interpolate is not False:
+                self.interpolate_points(interpolate)
+            else:
+                # complicated indexing
+                # (because phi values must be "close", but R and Z can be exact matches)
+                # print(self.sparse_field.Phi)
+                # print(self.phi_nphi_steps)
+                # print(np.ravel(self.r_steps))
+                self.sparse_field = self.sparse_field[
+                    (np.isclose(self.sparse_field.Phi.values[:, None],
+                                self.phi_nphi_steps).any(axis=1)) &
+                    (np.isclose(self.sparse_field.R.values[:, None],
+                                np.ravel(self.r_steps)).any(axis=1)) &
+                    (self.sparse_field.Z.isin(self.z_steps))]
+                self.sparse_field = self.sparse_field.sort_values(['Z', 'R', 'Phi'])
+                # print(self.z_steps)
+                # print(self.phi_nphi_steps)
+                # print(self.full_field.Phi.unique())
+                # print(self.sparse_field)
+                # input()
+
+                # self.apply_selection('Z', z_steps)
+                # if r_steps:
+                #     self.apply_selection('R', r_steps)
+                #     self.apply_selection('Phi', phi_steps)
+                #     self.phi_steps = phi_steps
+                # else:
+                #     self.apply_selection('X', x_steps)
+                #     self.apply_selection('Y', y_steps)
+
+            # for mag in ['Bz', 'Br', 'Bphi', 'Bx', 'By', 'Bz']:
+            #     try:
+            #         self.sparse_field.eval('{0}err = abs(0.0001*{0}+1e-15)'.format(mag), inplace=True)
+            #     except:
+            #         pass
+        # otherwise use the entire dataset
         else:
-            # complicated indexing
-            # (because phi values must be "close", but R and Z can be exact matches)
-            # print(self.sparse_field.Phi)
-            # print(self.phi_nphi_steps)
-            # print(np.ravel(self.r_steps))
-            self.sparse_field = self.sparse_field[
-                (np.isclose(self.sparse_field.Phi.values[:, None],
-                            self.phi_nphi_steps).any(axis=1)) &
-                (np.isclose(self.sparse_field.R.values[:, None],
-                            np.ravel(self.r_steps)).any(axis=1)) &
-                (self.sparse_field.Z.isin(self.z_steps))]
             self.sparse_field = self.sparse_field.sort_values(['Z', 'R', 'Phi'])
-            # print(self.z_steps)
-            # print(self.phi_nphi_steps)
-            # print(self.full_field.Phi.unique())
-            # print(self.sparse_field)
-            # input()
-
-            # self.apply_selection('Z', z_steps)
-            # if r_steps:
-            #     self.apply_selection('R', r_steps)
-            #     self.apply_selection('Phi', phi_steps)
-            #     self.phi_steps = phi_steps
-            # else:
-            #     self.apply_selection('X', x_steps)
-            #     self.apply_selection('Y', y_steps)
-
-        # for mag in ['Bz', 'Br', 'Bphi', 'Bx', 'By', 'Bz']:
-        #     try:
-        #         self.sparse_field.eval('{0}err = abs(0.0001*{0}+1e-15)'.format(mag), inplace=True)
-        #     except:
-        #         pass
 
     def takespread(self, sequence, num):
         """Return an evenly-spaced sequence of length `num` from the input sequence.
@@ -522,9 +528,9 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
 
             # assuming config files already defined...
 
-            In [12]: ff = FieldFitter(sparse_field, cfg_geom)
+            In [12]: ff = FieldFitter(sparse_field)
 
-            In [13]: ff.fit(cfg_geom.geom, cfg_params, cfg_pickle)
+            In [13]: ff.fit(cfg_params, cfg_pickle)
             ...      # This will take some time, especially for many data points and free params
 
             In [14]: ff.merge_data_fit_res() # merge the results in for easy plotting
@@ -618,7 +624,8 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     hpg = HallProbeGenerator(input_data, z_steps=cfg_geom.z_steps,
                              r_steps=cfg_geom.r_steps, phi_steps=cfg_geom.phi_steps,
                              x_steps=cfg_geom.x_steps, y_steps=cfg_geom.y_steps,
-                             interpolate=cfg_geom.interpolate, do2pi=cfg_geom.do2pi)
+                             interpolate=cfg_geom.interpolate, do2pi=cfg_geom.do2pi,
+                             do_selection=cfg_geom.do_selection)
 
     seed = None
     if len(cfg_geom.bad_calibration) == 4:
@@ -637,12 +644,12 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     print(hall_measure_data.columns)
     # raw_input()
 
-    ff = FieldFitter(hall_measure_data, cfg_geom)
+    ff = FieldFitter(hall_measure_data)
     if profile:
-        ZZ, RR, PP, Bz, Br, Bphi = ff.fit(cfg_geom.geom, cfg_params, cfg_pickle, profile=profile)
+        ZZ, RR, PP, Bz, Br, Bphi = ff.fit(cfg_params, cfg_pickle, profile=profile)
         return ZZ, RR, PP, Bz, Br, Bphi
     else:
-        ff.fit(cfg_geom.geom, cfg_params, cfg_pickle)
+        ff.fit(cfg_params, cfg_pickle)
 
     ff.merge_data_fit_res()
 

@@ -14,11 +14,11 @@ from six.moves import range
 
 cfg_data   = namedtuple('cfg_data', 'datatype magnet path conditions')
 cfg_geom   = namedtuple('cfg_geom', 'geom z_steps r_steps phi_steps x_steps y_steps '
-                        'bad_calibration interpolate do2pi')
+                        'bad_calibration interpolate do2pi do_selection')
 cfg_plot   = namedtuple('cfg_plot', 'plot_type zlims save_loc sub_dir')
 cfg_params = namedtuple('cfg_params', 'pitch1 ms_h1 ns_h1 pitch2 ms_h2 ns_h2 '
                         ' length1 ms_c1 ns_c1 length2 ms_c2 ns_c2 '
-                        ' ks_dict bs_tuples bs_bounds version')
+                        ' ks_dict bs_tuples bs_bounds loss version')
 cfg_pickle = namedtuple('cfg_pickle', 'use_pickle save_pickle load_name save_name recreate')
 
 #################
@@ -104,27 +104,27 @@ z_steps_cole_hg = [i/1000 for i in range(-1500, 1500, 25)]
 cfg_geom_cyl_800mm_long         = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
                                            x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False)
+                                           do2pi=False, do_selection=True)
 
 cfg_geom_Cole_250mm_cyl         = cfg_geom('cyl', z_steps_cole_small, r_steps_250mm_true[0:],
                                            phi_steps_true[0:], x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True)
+                                           interpolate=False, do2pi=True, do_selection=True)
 
 cfg_geom_Cole_250mm_cyl_hg      = cfg_geom('cyl', z_steps_cole_hg, r_steps_250mm_true_hg[0:],
                                            phi_steps_true_hg[0:], x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True)
+                                           interpolate=False, do2pi=True, do_selection=True)
 
 cfg_geom_Cole_1m_cyl            = cfg_geom('cyl', z_steps_cole_small, r_steps_1m_true[0:],
                                            phi_steps_true[0:], x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True)
+                                           interpolate=False, do2pi=True, do_selection=True)
 
 cfg_geom_Cole_1m_cyl_hg         = cfg_geom('cyl', z_steps_cole_hg, r_steps_1m_true_hg[0:],
                                            phi_steps_true_hg[0:], x_steps=None, y_steps=None,
                                            bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True)
+                                           interpolate=False, do2pi=True, do_selection=True)
 
 #################
 # the plot cfgs #
@@ -144,18 +144,18 @@ cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  length1=10, ms_c1=50, ns_c1=4,
                                                  length2=0, ms_c2=0, ns_c2=0,
                                                  ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 bs_bounds=None, version=1000)
+                                                 bs_bounds=None, loss='linear', version=1000)
 
 # cfg_params_DS_Mau13                 = cfg_params(pitch1=13, ms_h1=50, ns_h1=4,
 #                                                  pitch2=0, ms_h2=0, ns_h2=0,
 #                                                  length1=0, ms_c1=0, ns_c1=0,
 #                                                  length2=0, ms_c2=0, ns_c2=0,
 #                                                  ks_dict={'k3': 10000}, bs_tuples=None,
-#                                                  bs_bounds=None, version=1000)
+#                                                  bs_bounds=None, loss='linear', version=1000)
 
 cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Mau13',
-                                                 save_name='Mau13', recreate=False)
+                                                 save_name='Mau13', loss='linear', recreate=False)
 
 cfg_params_Cole_Hel                 = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
                                                  pitch2=0, ms_h2=0, ns_h2=0,
@@ -165,6 +165,7 @@ cfg_params_Cole_Hel                 = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
                                                  bs_tuples=((0.25, 0, -46),
                                                             (0.25, 0, 46)),
                                                  bs_bounds=(0.1, 0.1, 5),
+                                                 loss='linear',
                                                  version=1000)
 cfg_pickle_Cole_Hel                 = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Cole_Hel',
@@ -178,6 +179,7 @@ cfg_params_Cole_Hel_Short           = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
                                                  bs_tuples=((0.25, 0, -4.6),
                                                             (0.25, 0, 4.6)),
                                                  bs_bounds=(0.1, 0.1, 5),
+                                                 loss='linear',
                                                  version=1000)
 cfg_pickle_Cole_Hel_Short           = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Cole_Hel_Short',
@@ -191,6 +193,7 @@ cfg_params_Cole_Cyl                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  bs_tuples=((0.25, 0, -46),
                                                             (0.25, 0, 46)),
                                                  bs_bounds=(0.1, 0.1, 3),
+                                                 loss='linear',
                                                  version=1000)
 cfg_pickle_Cole_Cyl                 = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Cole_Cyl',
@@ -207,6 +210,7 @@ cfg_params_Cole_1m_Cyl              = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                  bs_tuples=((1., 0, -4.6),
                                                             (1., 0, 4.6)),
                                                  bs_bounds=(0.1, 0.1, 10),
+                                                 loss='linear',
                                                  version=1000)
 cfg_pickle_Cole_1m_Cyl              = cfg_pickle(use_pickle=False, save_pickle=True,
                                                  load_name='Cole_1m_Cyl',

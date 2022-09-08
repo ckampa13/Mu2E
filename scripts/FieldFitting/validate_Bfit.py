@@ -20,9 +20,9 @@ def validatefit(param_load_name='Mau13', sample=None, savename='Bmaps/Mau13_stan
     cfg_pickle_Mau13_recreate = cfg_pickle(use_pickle=True, save_pickle=False, load_name=param_load_name,save_name=param_load_name, recreate=True)
 
     print('Initializing FieldFitter')
-    ff = FieldFitter(df_Mu2e, cfg_geom_cyl_800mm_long)
+    ff = FieldFitter(df_Mu2e)
     print('Running Fit')
-    ff.fit(ff.geom, cfg_params_DS_Mau13, cfg_pickle_Mau13_recreate)
+    ff.fit(cfg_params_DS_Mau13, cfg_pickle_Mau13_recreate)
     print('Merging data fit residuals')
     ff.merge_data_fit_res()
     print('Saving to pickle')

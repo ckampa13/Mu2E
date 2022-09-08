@@ -108,7 +108,10 @@ class DataFrameMaker(object):
         # Load from pickle (all are identical in format).  Otherwise, load from csv
         if input_type == 'pkl':
             # self.data_frame = pkl.load(open(self.file_name+'.p', "rb"), encoding='latin1')
-            self.data_frame = pd.read_pickle(self.file_name+'.p')
+            try:
+                self.data_frame = pd.read_pickle(self.file_name+'.p')
+            except:
+                self.data_frame = pd.read_pickle(self.file_name+'.pkl')
         elif input_type == 'df':
             self.data_frame = input_df
 
@@ -724,10 +727,88 @@ if __name__ == "__main__":
     # data_maker.do_basic_modifications(-3.896, descale=True)
 
     # Mau13 50% DS
+    # data_maker = DataFrameMaker(
+    #     mu2e_ext_path+'Bmaps/Mau13/DSMap50',
+    #     input_type='csv', field_map_version='Mau13_50')
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+
+    # helicalc (PS+TS, DS helicalc coils, no busbars, no interlayer connects)
+    # all scaling is correct (m and G)
+    # note adding file extension is a bit of a kludge
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.full.pkl',
+    #     input_type='pkl', field_map_version='helicalc_coils')
+    # # check which...
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # data_maker.do_basic_modifications(-3.904, descale=False)
+    # PS, TS off
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.PS_TS_Off.full.pkl',
+    #     input_type='pkl', field_map_version='helicalc_coils_no_ilc')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    ### straight bus bars
+    # all
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all_straight_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_straight_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # longitudinal only
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.long_straight_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_straight_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # tangential only
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.tang_straight_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_straight_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    ### arc bus bars
+    # all
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all_arc_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_arc_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # coaxial only
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.coax_arc_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_arc_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # to leads only
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.to_lead_arc_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_arc_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # transfer only
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.transfer_arc_bars.pkl',
+    #     input_type='pkl', field_map_version='helicalc_arc_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    ### ALL BUSBARS
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all.pkl',
+    #     input_type='pkl', field_map_version='helicalc_all_bars')
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    ###############
+    # helicalc (PS+TS, DS helicalc coils, no busbars, no interlayer connects)
+    # all scaling is correct (m and G)
+    # note adding file extension is a bit of a kludge
+    ddir = '/home/shared_data/'
     data_maker = DataFrameMaker(
-        mu2e_ext_path+'Bmaps/Mau13/DSMap50',
-        input_type='csv', field_map_version='Mau13_50')
-    data_maker.do_basic_modifications(-3.896, descale=True)
+        ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only.pkl',
+        input_type='pkl', field_map_version='helicalc_coils_only')
+    # check which...
+    data_maker.do_basic_modifications(-3.896, descale=False)
+    # data_maker.do_basic_modifications(-3.904, descale=False)
 
     data_maker.make_dump()
     # data_maker.make_dump('_noOffset')

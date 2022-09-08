@@ -24,9 +24,9 @@ Example:
         ...         r_steps = cfg_geom.r_steps, phi_steps = cfg_geom.phi_steps,
         ...         x_steps = cfg_geom.x_steps, y_steps = cfg_geom.y_steps)
 
-        In [12]: ff = FieldFitter(hpg.get_toy(), cfg_geom)
+        In [12]: ff = FieldFitter(hpg.get_toy())
 
-        In [13]: ff.fit(cfg_geom.geom, cfg_params, cfg_pickle)
+        In [13]: ff.fit(cfg_params, cfg_pickle)
         ...      # This will take some time, especially for many data points and free params
 
         In [14]: ff.merge_data_fit_res() # merge the results in for easy plotting
@@ -81,18 +81,10 @@ class FieldFitter:
         result (lmfit.ModelResult): Container for resulting fit information, inherited from `lmfit`
 
     """
-    def __init__(self, input_data, cfg_geom):
+    def __init__(self, input_data):
         self.input_data = input_data
-        if cfg_geom.geom == 'cyl':
-            self.phi_steps = cfg_geom.phi_steps
-            self.r_steps = cfg_geom.r_steps
-        elif cfg_geom.geom == 'cart':
-            self.x_steps = cfg_geom.x_steps
-            self.y_steps = cfg_geom.y_steps
-        self.pickle_path = mu2e_ext_path+'fit_params/'
-        self.geom = cfg_geom.geom
 
-    def fit(self, geom, cfg_params, cfg_pickle):
+    def fit(self, cfg_params, cfg_pickle):
         """Helper function that chooses one of the subsequent fitting functions."""
 
         self.fit_solenoid(cfg_params, cfg_pickle)
@@ -222,7 +214,7 @@ class FieldFitter:
                                                                         'gtol': 1e-10,
                                                                         'ftol': 1e-10,
                                                                         'xtol': 1e-10,
-                                                                        # 'loss': 'huber'
+                                                                        'loss': cfg_params.loss,
                                                                         })
                                        ##                                   # 'tr_solver': 'lsmr',
                                        ##                                   # 'tr_options':

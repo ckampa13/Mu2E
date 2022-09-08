@@ -118,7 +118,9 @@ def make_plot_loop(Bfile, Bshort, file_suffs, title_suffs, plotdir_0, mapdir):
 if __name__=='__main__':
     # choice of folder (change by hand for now)
     ######
-    B_dir = 'delta_Z_tests' # done
+    B_dir = 'cartesian_test' # done
+    # B_dir = 'k2_test' # done
+    # B_dir = 'delta_Z_tests' # done
     # B_dir = 'hp_bias' # done
     # B_dir = 'ensemble_random_scale_factor' # done
     ######

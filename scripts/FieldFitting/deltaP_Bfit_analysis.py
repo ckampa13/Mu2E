@@ -73,6 +73,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--map_name', help='Bmap filename (mu2e_ext_path/Bmaps/ already included)')
     parser.add_argument('-p', '--pkl_dir', help='Output dataframe pickle location (mu2e_ext_path/pickles/Bfit_CE_reco/ already included)')
+    parser.add_argument('-f', '--use_fit', help='Use fit values? If "yes" (default), uses columns ["Bx_fit", "By_fit", "Bz_fit"], else uses columns ["Bx", "By", "Bz"].')
     args = parser.parse_args()
     # fill defaults where needed
     if args.map_name is None:
@@ -83,6 +84,10 @@ if __name__=='__main__':
         args.pkl_dir = mu2e_ext_path+'pickles/Bfit_CE_reco/default/'
     else:
         args.pkl_dir = mu2e_ext_path+'pickles/Bfit_CE_reco/'+args.pkl_dir+'/'
+    if args.use_fit is None:
+        args.use_fit = True
+    else:
+        args.use_fit = args.use_fit == 'yes'
     # short Bfield name
     index = [i.start() for i in re.finditer('/', args.map_name)][-1]
     Bshort = args.map_name[index+1:-9]
@@ -91,7 +96,11 @@ if __name__=='__main__':
     check_dir(args.pkl_dir)
     # get df func
     print(f'Using Bmap File: {args.map_name}')
-    Bfunc = get_df_interp_func(filename=args.map_name, gauss=False, Blabels=['Bx_fit', 'By_fit', 'Bz_fit'])
+    if args.use_fit:
+        Blabels = ['Bx_fit', 'By_fit', 'Bz_fit']
+    else:
+        Blabels = ['Bx', 'By', 'Bz']
+    Bfunc = get_df_interp_func(filename=args.map_name, gauss=False, Blabels=Blabels)
     # run analysis
     # N_lim = 64 # testing
     N_lim = None

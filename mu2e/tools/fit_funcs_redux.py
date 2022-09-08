@@ -2388,11 +2388,18 @@ def brzphi_3d_producer_giant_function(z, r, phi,
     def calc_b_fields_cart2(x, y, z, phi, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10,
                             model_r, model_phi, model_z):
         for i in prange(z.shape[0]):
-            model_x = k1 + k4*x[i] + k7*y[i] + k8*z[i] + k10*y[i]*z[i]
+            # Pollack
+            # model_x = k1 + k4*x[i] + k7*y[i] + k8*z[i] + k10*y[i]*z[i]
 
-            model_y = k2 + k5*y[i] + k7*x[i] + k9*z[i] + k10*x[i]*z[i]
+            # model_y = k2 + k5*y[i] + k7*x[i] + k9*z[i] + k10*x[i]*z[i]
 
-            model_z[i] += k3 + k6*z[i] + k8*x[i] + k9*y[i] + k10*x[i]*y[i]
+            # model_z[i] += k3 + k6*z[i] + k8*x[i] + k9*y[i] + k10*x[i]*y[i]
+            # Kampa
+            model_x = k1 + k4*y[i] + k5*z[i] + k7*y[i]*z[i]
+
+            model_y = k2 + k4*x[i] + k6*z[i] + k7*x[i]*z[i]
+
+            model_z[i] += k3 + k5*x[i] + k6*y[i] + k7*x[i]*y[i]
 
             model_r[i] += model_x*np.cos(phi[i]) + model_y*np.sin(phi[i])
             model_phi[i] += -model_x*np.sin(phi[i]) + model_y*np.cos(phi[i])

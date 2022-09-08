@@ -130,7 +130,7 @@ def mu2e_plot(df, x, y, conditions=None, mode='mpl', info=None, savename=None, a
 
 
 def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=None, save_name=None,
-                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, ax=None,
+                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
                 do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True):
     """Generate 3D plots, x and y vs z.
 

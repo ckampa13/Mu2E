@@ -87,7 +87,10 @@ def make_plot_hist(df, name='Mau9 70%', var='tand_Mau9_70', xl=r'$\tan(\mathrm{d
 if __name__=='__main__':
     # check plot output directory and create if doesn't exist
     #######
-    B_dir = 'delta_Z_tests' # done
+    B_dir = 'cartesian_test' # done
+    # B_dir = 'default' # done
+    # B_dir = 'k2_test' # done
+    # B_dir = 'delta_Z_tests' # done
     # B_dir = 'hp_bias' # done
     # B_dir = 'ensemble_random_scale_factor' # done
     #######
