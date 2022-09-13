@@ -297,6 +297,7 @@ cfg_params_DS_Mau13_only_ks         = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
                                                           'k7': 0,},
                                                  bs_tuples=None,
                                                  bs_bounds=None,
+                                                 loss='linear',
                                                  version=1000)
 
 cfg_params_DS_Mau13_no_BS           = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,

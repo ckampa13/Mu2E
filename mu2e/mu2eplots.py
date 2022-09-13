@@ -53,6 +53,9 @@ import os
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+from matplotlib.colors import ListedColormap
+from matplotlib import gridspec
 import pandas as pd
 import plotly.tools as tls
 import plotly.graph_objs as go
@@ -64,6 +67,9 @@ from IPython.display import display
 from plotly.offline import init_notebook_mode, iplot, plot
 from six.moves import range
 from six.moves import zip
+# face color issue
+plt.rcParams['axes.facecolor']='white'
+plt.rcParams['savefig.facecolor']='white'
 
 
 def mu2e_plot(df, x, y, conditions=None, mode='mpl', info=None, savename=None, ax=None,
@@ -485,6 +491,181 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
 
     # return save_name
     return fig
+
+def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
+                               df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
+                               do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True):
+    """FIXME! This docstring was copied from mu2e_plot3d and needs to be edited.
+    Generate 3D plots, x and y vs z.
+
+    Generate a 3D surface plot for a given DF and three columns. An optional selection string is
+    applied to the data via the :func:`pandas.DataFrame.query` interface, and is added to the title.
+    Extra processing is done to plot cylindrical coordinates if that is detected from `conditions`.
+    This function supports matplotlib and various plotly plotting modes.  If `df_fit` is specified,
+    `df` is plotted as a a scatter plot, and `df_fit` as a wireframe plot.
+
+    Args:
+        df (pandas.DataFrame): The input DF, must contain columns with labels corresponding to the
+            'x', 'y', and 'z' args.
+        x (str): Name of the first independent variable.
+        y (str): Name of the second independent variable.
+        z (str): Name of the dependent variable.
+        conditions (str, optional): A string adhering to the :mod:`numexpr` syntax used in
+            :func:`pandas.DataFrame.query`.
+        mode (str, optional): A string indicating which plotting package and method should be used.
+            Default is 'mpl'. Valid values: ['mpl', 'plotly', 'plotly_html', 'plotly_nb']
+        info (str, optional): Extra information to add to the title.
+        save_dir (str, optional): If not `None`, the plot will be saved to the indicated path. The
+            file name is automated, based on the input args.
+        save_name (str, optional): If `None`, the plot name will be generated based on the 'x', 'y',
+            'z', and 'condition' args.
+        df_fit (bool, optional): If the input df contains columns with the suffix '_fit', plot a
+            scatter plot using the normal columns, and overlay a wireframe plot using the '_fit'
+            columns.  Also generate a heatmap showing the residual difference between the two plots.
+        ptype (str, optional): Choose between '3d' and 'heat'.  Default is '3d'.
+
+    Returns:
+        Name of saved image/plot or None.
+    """
+
+    # _modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb']
+    #_modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb', 'plotly_html_img']
+    #_modes = ['mpl', 'mpl_none']
+    _modes = ['mpl_nonuni', 'mpl_nonuni_none']
+
+    if mode not in _modes:
+        raise ValueError(mode+' not one of: '+', '.join(_modes))
+    # print('Before parsing:')
+    # print(df)
+    if conditions:
+        df, conditions_title = conditions_parser_nonuni(df, conditions, do2pi)
+    # df.sort_values(by=[y,x], inplace=True)
+    df.sort_values(by=[x,y], inplace=True)
+    # print('After parsing:')
+    # print(df)
+    X = df[x].values
+    Y = df[y].values
+    Z = df[z].values
+    if df_fit:
+        Z_fit = df[z+'_fit']
+        data_fit_diff = (Z - Z_fit)
+        map_color = np.abs(data_fit_diff) > cut_color
+        m = map_color
+
+    # Prep save area
+    if save_dir:
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        if save_name is None:
+            save_name = '{0}_{1}{2}_{3}'.format(
+                z, x, y, '_'.join([i for i in conditions_title.split(', ') if i != 'and']))
+            save_name = re.sub(r'[<>=!\s]', '', save_name)
+
+            if df_fit:
+                save_name += '_fit'
+
+    # Start plotting
+    if 'mpl' in mode:
+        if not ax:
+            if ptype.lower() == '3d' and not df_fit:
+                fig = plt.figure(figsize=(16,8))
+            elif ptype.lower() == 'heat':
+                #fig = plt.figure()
+                raise NotImplementedError("Only '3d' ptype has been implemented.")
+            else:
+                gridspec_kw = dict(height_ratios=[2, 1], width_ratios=[1, 8])
+                fig, axs = plt.subplots(2, 2, figsize=(16,16), gridspec_kw=gridspec_kw)
+                axs[0, 0].remove()
+                axs[0, 1].remove()
+                axs[1, 0].remove()
+                axs[1, 1].remove()
+                gs = gridspec.GridSpec(2, 2, **gridspec_kw)
+
+        if df_fit:
+            ax = fig.add_subplot(gs[0, :], projection='3d')
+            ax.scatter(X[~m], Y[~m], Z[~m], c='black', s=8, zorder=100)
+            ax.scatter(X[m], Y[m], Z[m], c='red', s=40, marker='*', zorder=101)
+            ax.plot_trisurf(X, Y, Z_fit, cmap='viridis', edgecolor=None, zorder=99, alpha=0.4)
+            ax.set_box_aspect((np.ptp(X), 3*np.ptp(Y), 3*np.ptp(Y)))  # aspect ratio a bit closer to reality
+        elif ptype.lower() == '3d':
+            if not ax:
+                ax = fig.gca(projection='3d')
+            ax.plot_trisurf(X, Y, Z, cmap='viridis', edgecolor=None, zorder=99, alpha=0.8)
+        elif ptype.lower() == 'heat':
+            # if ax:
+            #     pcm = ax.pcolormesh(Xi, Yi, Z, cmap=plt.get_cmap('viridis'))
+            # else:
+            #     plt.pcolormesh(Xi, Yi, Z, cmap=plt.get_cmap('viridis'))
+            raise NotImplementedError("Only '3d' ptype has been implemented.")
+        else:
+            raise KeyError(ptype+' is an invalid type!, must be "heat" or "3D"')
+
+        plt.xlabel(f'{x} ({units})', fontsize=18)
+        plt.ylabel(f'{y} ({units})', fontsize=18)
+        if ptype.lower() == '3d':
+            ax.set_zlabel(z+' (G)', fontsize=18)
+            ax.ticklabel_format(style='sci', axis='z')
+            ax.zaxis.labelpad = 40
+            ax.zaxis.set_tick_params(which='both', direction='out', pad=20)
+            ax.xaxis.set_tick_params(which='both', direction='in', pad=15)
+            ax.yaxis.set_tick_params(which='both', direction='in', pad=15)
+            ax.xaxis.labelpad = 30
+            ax.yaxis.labelpad = 30
+        # only applies for "heat", which I haven't implemented yet.
+        # elif do_title:
+        #     if ax:
+        #         cb = plt.colorbar(pcm)
+        #     else:
+        #         cb = plt.colorbar()
+        #     cb.set_label(z+' (G)', fontsize=18)
+        if do_title:
+            if title_simp:
+                plt.title(title_simp)
+            elif info is not None:
+                plt.title(f'{info} {z} vs {x} and {y} for DS\n{conditions_title}',
+                          fontsize=20)
+            else:
+                plt.title(f'{z} vs {x} and {y} for DS\n{conditions_title}',
+                          fontsize=20)
+        if ptype.lower() == '3d':
+            ax.view_init(elev=50., azim=-85)
+        # why do we save a png here?
+        # if save_dir:
+        #     plt.savefig(save_dir+'/'+save_name+'.png')
+
+        if df_fit:
+            ax2 = fig.add_subplot(gs[1, 1])
+            max_val = np.max(data_fit_diff)
+            min_val = np.min(data_fit_diff)
+            abs_max_val = max(abs(max_val), abs(min_val))
+            # create custom colormap
+            GreysBig = get_cmap('Greys', 512)
+            newGreys = ListedColormap(GreysBig(np.linspace(0.25, 1.0, 256)))
+            # plot differently based on size of residual
+            max_dev = np.max(np.abs(data_fit_diff))
+            sc = ax2.scatter(X[~m], Y[~m], c=data_fit_diff[~m], s=2, cmap=newGreys)
+            sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20, cmap='bwr')
+            # if scale by size, use below
+            # sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20*np.abs(data_fit_diff[m])/max_dev, cmap='bwr')
+            cb = plt.colorbar(sc, fraction=0.046, pad=0.06)
+            cb.set_label(label=f'Data-Fit (G) |<={cut_color}|', fontsize=18)
+            cb_m = plt.colorbar(sc_m, fraction=0.046, pad=0.04)
+            cb_m.set_label(label=f'Data-Fit (G)', fontsize=18)
+            plt.title('Residual, Data-Fit', fontsize=20)
+            ax2.set_xlabel(f'{x} ({units})', fontsize=18)
+            ax2.set_ylabel(f'{y} ({units})', fontsize=18)
+            #ax.dist = 11 # default 10
+        fig.tight_layout()
+        if save_dir:
+            # fig.tight_layout()
+            #plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
+            plt.savefig(save_dir+'/'+save_name+'.pdf')
+            plt.savefig(save_dir+'/'+save_name+'.png')
+
+    elif 'plotly' in mode:
+        raise NotImplementedError("Plotly has not been implemented for non-uniform plots. Please include 'mpl' in the 'mode' parameter.")
+
+    return fig, ax
 
 
 def mu2e_plot3d_ptrap(df, x, y, z, save_name=None, color=None, df_xray=None, x_range=None,
@@ -973,6 +1154,67 @@ def conditions_parser(df, conditions, do2pi=False):
 
     return df, conditions_title
 
+def conditions_parser_nonuni(df, conditions, do2pi=False):
+    '''Helper function for parsing queries passed to a plotting function.  Special care is taken if
+    a 'Phi==X' condition is encountered, in order to select Phi and Pi-Phi'''
+
+    # Special treatment to detect cylindrical coordinates:
+    # Some regex matching to find any 'Phi' condition and treat it as (Phi & Phi-Pi).
+    # This is done because when specifying R-Z coordinates, we almost always want the
+    # 2-D plane that corresponds to that (Phi & Phi-Pi) pair.  In order to plot this,
+    # we assign a value of -R to all R points that correspond to the 'Phi-Pi' half-plane
+
+    p = re.compile(r'(?:and)*\s*([-+]?(?:[0-9]*\.[0-9]+|[0-9]+))\s*\<=*\s*Phi\s*\<=*\s*([-+]?(?:[0-9]*\.[0-9]+|[0-9]+))')
+    phi_str = p.search(conditions)
+    conditions_nophi = p.sub('', conditions)
+    conditions_nophi = re.sub(r'^\s*and\s*', '', conditions_nophi)
+    conditions_nophi = conditions_nophi.strip()
+    try:
+        phi_l = float(phi_str.group(1))
+        phi_h = float(phi_str.group(2))
+        phi_mean = (phi_l + phi_h) / 2
+    except:
+        phi_l = None
+        phi_h = None
+        phi_mean = None
+
+    df = df.query(conditions_nophi)
+
+    # Make radii negative for negative phi values (for plotting purposes)
+    if phi_l is not None:
+        isc = np.isclose
+        if do2pi:
+            #nphi = phi+np.pi
+            raise NotImplementedError("do2pi==True not implemented for non-uniform data.")
+        else:
+            if isc(phi_mean, 0):
+                nphi_l = phi_l + np.pi
+                nphi_h = phi_h + np.pi
+                use_abs = True
+            else:
+                nphi_l = phi_l-np.pi
+                nphi_h = phi_h-np.pi
+                use_abs = False
+        #df = df[(isc(phi, df.Phi)) | (isc(nphi, df.Phi))]
+        if use_abs:
+            df = df.query(f'({phi_l} <= abs(Phi) <= {phi_h}) or ({nphi_l} <= abs(Phi) <= {nphi_h})').copy()
+            df.loc[(df.Phi.abs() >= nphi_l) & (df.Phi.abs() <= nphi_h), 'R'] *= -1
+        else:
+            df = df.query(f'({phi_l} <= Phi <= {phi_h}) or ({nphi_l} <= Phi <= {nphi_h})').copy()
+            #df.loc[isc(nphi, df.Phi), 'R'] *= -1
+            df.loc[(df.Phi >= nphi_l) & (df.Phi <= nphi_h), 'R'] *= -1
+
+    conditions_title = conditions_nophi.replace(' and ', ', ')
+    # seems wrong to strip this out of the title
+    # conditions_title = conditions_title.replace('R!=0', '')
+    conditions_title = conditions_title.strip()
+    conditions_title = conditions_title.strip(',')
+    if phi_mean is not None:
+        #conditions_title += f', Phi=={phi_mean:.2f}+-{phi_h - phi_mean:0.2f}'
+        conditions_title += f', {phi_l:.2f}<=Phi<={phi_h:.2f}'
+
+    return df, conditions_title
+#re.compile(r'(?:and)*\s*([-+]?(?:[0-9]*\.[0-9]+|[0-9]+))\s*\<=*\s*Phi\s*\<=*\s*([-+]?(?:[0-9]*\.[0-9]+|[0-9]+))')
 
 def xray_maker_2(df_xray, bz=50, bx=15, by=15):
     '''Helper function to generate the x-ray visualization for particle trapping plots.'''

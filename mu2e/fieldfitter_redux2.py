@@ -83,6 +83,7 @@ class FieldFitter:
     """
     def __init__(self, input_data):
         self.input_data = input_data
+        self.pickle_path = mu2e_ext_path+'fit_params/'
 
     def fit(self, cfg_params, cfg_pickle):
         """Helper function that chooses one of the subsequent fitting functions."""
@@ -193,6 +194,7 @@ class FieldFitter:
             self.result = self.mod.fit(np.concatenate([Br, Bz, Bphi]).ravel(),
                                        r=RR, z=ZZ, phi=PP, x=XX, y=YY, params=self.params,
                                        method='leastsq', fit_kws={'maxfev': 1})
+        # FIXME! I think we can remove this elif block. The else is exactly the same and should cover it.
         elif cfg_pickle.use_pickle:
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)
             self.result = self.mod.fit(np.concatenate([Br, Bz, Bphi]).ravel(),
@@ -203,6 +205,7 @@ class FieldFitter:
                                                                         'gtol': 1e-10,
                                                                         'ftol': 1e-10,
                                                                         'xtol': 1e-10,
+                                                                        'loss': cfg_params.loss,
                                                                         })
         else:
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)

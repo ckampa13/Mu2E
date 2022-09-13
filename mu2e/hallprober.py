@@ -87,7 +87,7 @@ from scipy.interpolate import Rbf
 import mu2e
 from mu2e.dataframeprod import DataFrameMaker
 from mu2e.fieldfitter_redux2 import FieldFitter
-from mu2e.mu2eplots import mu2e_plot3d
+from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_cyl
 from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
@@ -576,26 +576,39 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
 
     for step in steps:
         for ABC in ABC_geom[geom]:
-            if geom == 'cyl':
-                conditions_str = ' and '.join(conditions+('Phi=={}'.format(step),))
+            # plotting with possibly non-uniform data
+            if plot_type == 'mpl_nonuni':
+                # FIXME! Better way than hardcoding "dPhi" in the query?
+                if geom == 'cyl':
+                    conditions_str = ' and '.join(conditions+(f'{step-np.pi/32} <= Phi <= {step+np.pi/32}',))
+                else:
+                    raise NotImplementedError('geom=="cart" is not implemented for the non-uniform grid plotting.')
+                fig, ax = mu2e_plot3d_nonuniform_cyl(df, ABC[1], ABC[0], ABC[2], conditions=conditions_str, mode=plot_type, cut_color=5, info=None, save_dir=save_dir, save_name=None,
+                                                     df_fit=True, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
+                                                     do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False)
+            # original 3d plots from Brian
             else:
-                conditions_str = ' and '.join(conditions+('Y=={}'.format(step),))
-            save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
-                                    df_fit=True, mode=plot_type, save_dir=save_dir,
-                                    do2pi=cfg_geom.do2pi, units='m')
+                if geom == 'cyl':
+                    conditions_str = ' and '.join(conditions+('Phi=={}'.format(step),))
+                else:
+                    conditions_str = ' and '.join(conditions+('Y=={}'.format(step),))
+                # FIXME! This is the figure object, not save name
+                save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
+                                        df_fit=True, mode=plot_type, save_dir=save_dir,
+                                        do2pi=cfg_geom.do2pi, units='m')
 
-            # If we are saving the plotly_html, we also want to download stills
-            # and transfer them to the appropriate save location.
-            if plot_type == 'plotly_html_img':
+                # If we are saving the plotly_html, we also want to download stills
+                # and transfer them to the appropriate save location.
+                if plot_type == 'plotly_html_img':
+                    # FIXME! see above about save_name.
+                    init_loc = '/home/ckampa/Downloads/'+save_name+'.jpeg'
+                    final_loc = save_dir+'/'+save_name+'.jpeg'
+                    while not os.path.exists(init_loc):
+                            print('waiting for', init_loc, 'to download')
+                            time.sleep(2)
+                    shutil.move(init_loc, final_loc)
 
-                init_loc = '/home/ckampa/Downloads/'+save_name+'.jpeg'
-                final_loc = save_dir+'/'+save_name+'.jpeg'
-                while not os.path.exists(init_loc):
-                        print('waiting for', init_loc, 'to download')
-                        time.sleep(2)
-                shutil.move(init_loc, final_loc)
-
-    if plot_type == 'mpl':
+    if plot_type in ['mpl', 'mpl_nonuni']:
         plt.show()
 
 
