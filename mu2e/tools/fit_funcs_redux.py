@@ -2354,8 +2354,16 @@ def brzphi_3d_producer_giant_function(z, r, phi,
             model_z[i] += (D*np.sin(n*phi[i]) + (1-D)*np.cos(n*phi[i])) * \
                 iv[i]*cms*(-A*np.sin(cms*z[i]) + B*np.cos(cms*z[i]))
 
-            model_phi[i] += n*(D*np.cos(n*phi[i]) - (1-D)*np.sin(n*phi[i])) * \
-                (1/r[i])*iv[i]*(A*np.cos(cms*z[i]) + B*np.sin(cms*z[i]))
+            # testing removing 1/r for r=0
+            # if np.isclose(r, 0):
+            # if r == 0:
+
+                # model_phi[i] += 0.
+            # else:
+            #if not np.isclose(r[i], 0):
+            if abs(r[i]) >= 1e-5:
+                model_phi[i] += n*(D*np.cos(n*phi[i]) - (1-D)*np.sin(n*phi[i])) * \
+                    (1/r[i])*iv[i]*(A*np.cos(cms*z[i]) + B*np.sin(cms*z[i]))
 
     @njit(parallel=True)
     def calc_b_fields_cyl2(z, phi, r, cms, n, A, B, D, jv, jvp, model_r, model_z, model_phi):

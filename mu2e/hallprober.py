@@ -91,6 +91,10 @@ from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_cyl
 from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
+# parallelization
+from tqdm import tqdm
+from joblib import Parallel, delayed
+import multiprocessing
 interp_studies = imp.load_source(
     'interp_studies', '/home/ckampa/coding/Mu2E/scripts/FieldFitting/interp_studies.py')
 
@@ -510,8 +514,19 @@ class HallProbeGenerator(object):
 
         print('interpolation complete')
 
+def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom):
+    # FIXME! Better way than hardcoding "dPhi" in the query?
+    if cfg_geom.geom == 'cyl':
+        conditions_str = ' and '.join(conditions+(f'{step-np.pi/32} <= Phi <= {step+np.pi/32}',))
+    else:
+        raise NotImplementedError('geom=="cart" is not implemented for the non-uniform grid plotting.')
+    fig, ax = mu2e_plot3d_nonuniform_cyl(df, ABC[1], ABC[0], ABC[2], conditions=conditions_str, mode=cfg_plot.plot_type, cut_color=cfg_plot.zlims, info=None, save_dir=save_dir, save_name=None,
+                                         df_fit=True, ptype='3d', aspect=aspect, cmin=None, cmax=None, fig=None, ax=None,
+                                         do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False)
+    return fig, ax
 
-def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
+
+def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', parallel=True):
     """Make a series of comparison plots with the fit output and hallprobe input.
 
     This function takes input DFs and `namedtuple` config files, and generates a comprehensive
@@ -574,20 +589,24 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
         save_dir = mu2e.mu2e_ext_path+'plots/html/'+name
         # save_dir = '/home/ckampa/Plots/FieldFitting/'+name
 
-    for step in steps:
-        for ABC in ABC_geom[geom]:
-            # plotting with possibly non-uniform data
-            if plot_type == 'mpl_nonuni':
-                # FIXME! Better way than hardcoding "dPhi" in the query?
-                if geom == 'cyl':
-                    conditions_str = ' and '.join(conditions+(f'{step-np.pi/32} <= Phi <= {step+np.pi/32}',))
-                else:
-                    raise NotImplementedError('geom=="cart" is not implemented for the non-uniform grid plotting.')
-                fig, ax = mu2e_plot3d_nonuniform_cyl(df, ABC[1], ABC[0], ABC[2], conditions=conditions_str, mode=plot_type, cut_color=5, info=None, save_dir=save_dir, save_name=None,
-                                                     df_fit=True, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
-                                                     do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False)
-            # original 3d plots from Brian
-            else:
+    if plot_type == 'mpl_nonuni':
+        if parallel:
+            num_cpu = multiprocessing.cpu_count()
+            # tqdm
+            # plot_tups = Parallel(n_jobs=num_cpu)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom) for step in tqdm(steps, desc='Phi Step', total=len(steps)) for ABC in tqdm(ABC_geom[geom], desc='B component', total=len(ABC_geom[geom])))
+            # no tqdm
+            plot_tups = Parallel(n_jobs=num_cpu)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom) for ABC in ABC_geom[geom] for step in steps)
+            # for tup in plot_tups:
+            #     fig, ax = tup
+        else:
+            # WORKING BUT NOT PARALLEL
+            for step in steps:
+                for ABC in ABC_geom[geom]:
+                    fig, ax = plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom)
+    # original 3d plots from Brian
+    else:
+        for step in steps:
+            for ABC in ABC_geom[geom]:
                 if geom == 'cyl':
                     conditions_str = ' and '.join(conditions+('Phi=={}'.format(step),))
                 else:
@@ -612,7 +631,7 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name):
         plt.show()
 
 
-def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False):
+def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True):
     """Universal function to perform all types of hall probe measurements, plots, and further
     analysis.
 
@@ -633,7 +652,12 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
 
     plt.close('all')
     input_data = DataFrameMaker(cfg_data.path, input_type='pkl').data_frame
-    input_data.query(' and '.join(cfg_data.conditions))
+    # THIS ISN'T DOING THE QUERY
+    if not cfg_geom.do_selection:
+        input_data = input_data.query(' and '.join(cfg_data.conditions))
+    # FIXME! Check whether this query should run during "standard" uniform grid running.
+    # else:
+    # ????
     hpg = HallProbeGenerator(input_data, z_steps=cfg_geom.z_steps,
                              r_steps=cfg_geom.r_steps, phi_steps=cfg_geom.phi_steps,
                              x_steps=cfg_geom.x_steps, y_steps=cfg_geom.y_steps,
@@ -667,7 +691,7 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     ff.merge_data_fit_res()
 
     if cfg_plot.plot_type != 'none':
-        make_fit_plots(ff.input_data, cfg_data, cfg_geom, cfg_plot, name)
+        make_fit_plots(ff.input_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots)
 
     return hall_measure_data, ff
 

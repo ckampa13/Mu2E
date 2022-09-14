@@ -37,7 +37,7 @@ Example:
 
 
 Todo:
-    * Allow for \*\*kwargs inheriting from mpl, map them for plotly as well.
+    * Allow for **kwargs inheriting from mpl, map them for plotly as well.
     * Build in more flexibility for particle trapping plots.
     * Particle animation GraphWidget will not work with updated jupyter, keep an eye on dev.
 
@@ -531,7 +531,8 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
     # _modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb']
     #_modes = ['mpl', 'mpl_none', 'plotly', 'plotly_html', 'plotly_nb', 'plotly_html_img']
     #_modes = ['mpl', 'mpl_none']
-    _modes = ['mpl_nonuni', 'mpl_nonuni_none']
+    #_modes = ['mpl_nonuni', 'mpl_nonuni_none']
+    _modes = ['mpl_nonuni']
 
     if mode not in _modes:
         raise ValueError(mode+' not one of: '+', '.join(_modes))
@@ -586,7 +587,8 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
             ax.scatter(X[~m], Y[~m], Z[~m], c='black', s=8, zorder=100)
             ax.scatter(X[m], Y[m], Z[m], c='red', s=40, marker='*', zorder=101)
             ax.plot_trisurf(X, Y, Z_fit, cmap='viridis', edgecolor=None, zorder=99, alpha=0.4)
-            ax.set_box_aspect((np.ptp(X), 3*np.ptp(Y), 3*np.ptp(Y)))  # aspect ratio a bit closer to reality
+            if aspect != 'square':
+                ax.set_box_aspect((np.ptp(X), 3*np.ptp(Y), 3*np.ptp(Y)))  # aspect ratio a bit closer to reality
         elif ptype.lower() == '3d':
             if not ax:
                 ax = fig.gca(projection='3d')
@@ -647,14 +649,23 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
             sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20, cmap='bwr')
             # if scale by size, use below
             # sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20*np.abs(data_fit_diff[m])/max_dev, cmap='bwr')
-            cb = plt.colorbar(sc, fraction=0.046, pad=0.06)
+            cb = plt.colorbar(sc, fraction=0.046, pad=0.08)
             cb.set_label(label=f'Data-Fit (G) |<={cut_color}|', fontsize=18)
-            cb_m = plt.colorbar(sc_m, fraction=0.046, pad=0.04)
+            cb_m = plt.colorbar(sc_m, fraction=0.046, pad=0.05)
             cb_m.set_label(label=f'Data-Fit (G)', fontsize=18)
             plt.title('Residual, Data-Fit', fontsize=20)
             ax2.set_xlabel(f'{x} ({units})', fontsize=18)
             ax2.set_ylabel(f'{y} ({units})', fontsize=18)
             #ax.dist = 11 # default 10
+        # various remaining formatting steps
+        X_l = np.min(X)
+        X_h = np.max(X)
+        X_r = X_h - X_l
+        Y_l = np.min(Y)
+        Y_h = np.max(Y)
+        Y_r = Y_h - Y_l
+        ax.set_xlim([X_l-0.05*X_r, X_h+0.05*X_r])
+        ax.set_ylim([Y_l-0.05*Y_r, Y_h+0.05*Y_r])
         fig.tight_layout()
         if save_dir:
             # fig.tight_layout()
