@@ -494,7 +494,7 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
 
 def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
                                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
-                               do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True):
+                               do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True,parallel=False):
     """FIXME! This docstring was copied from mu2e_plot3d and needs to be edited.
     Generate 3D plots, x and y vs z.
 
@@ -536,6 +536,17 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
 
     if mode not in _modes:
         raise ValueError(mode+' not one of: '+', '.join(_modes))
+    # if running in parallel, need to set some rcParams
+    if parallel:
+        plt.rcParams.update({'font.size': 18.0})   # increase plot font size
+        # figsize = (16, 16)
+        figsize = (15, 15)
+        # figsize = (8, 8)
+        # figsize = (12, 12)
+        dist = 11
+    else:
+        figsize = (16, 16)
+        dist = 10
     # print('Before parsing:')
     # print(df)
     if conditions:
@@ -575,7 +586,7 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
                 raise NotImplementedError("Only '3d' ptype has been implemented.")
             else:
                 gridspec_kw = dict(height_ratios=[2, 1], width_ratios=[1, 8])
-                fig, axs = plt.subplots(2, 2, figsize=(16,16), gridspec_kw=gridspec_kw)
+                fig, axs = plt.subplots(2, 2, figsize=figsize, gridspec_kw=gridspec_kw)#, constrained_layout=True)
                 axs[0, 0].remove()
                 axs[0, 1].remove()
                 axs[1, 0].remove()
@@ -586,7 +597,9 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
             ax = fig.add_subplot(gs[0, :], projection='3d')
             ax.scatter(X[~m], Y[~m], Z[~m], c='black', s=8, zorder=100)
             ax.scatter(X[m], Y[m], Z[m], c='red', s=40, marker='*', zorder=101)
-            ax.plot_trisurf(X, Y, Z_fit, cmap='viridis', edgecolor=None, zorder=99, alpha=0.4)
+            trs = ax.plot_trisurf(X, Y, Z_fit, cmap='viridis', edgecolor=None, zorder=99, alpha=0.4)
+            cb_3d = plt.colorbar(trs, fraction=0.046, pad=0.08)
+            cb_3d.set_label(label=z+' (G)', fontsize=18)
             if aspect != 'square':
                 ax.set_box_aspect((np.ptp(X), 3*np.ptp(Y), 3*np.ptp(Y)))  # aspect ratio a bit closer to reality
         elif ptype.lower() == '3d':
@@ -646,17 +659,18 @@ def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_col
             # plot differently based on size of residual
             max_dev = np.max(np.abs(data_fit_diff))
             sc = ax2.scatter(X[~m], Y[~m], c=data_fit_diff[~m], s=2, cmap=newGreys)
-            sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20, cmap='bwr')
-            # if scale by size, use below
-            # sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20*np.abs(data_fit_diff[m])/max_dev, cmap='bwr')
             cb = plt.colorbar(sc, fraction=0.046, pad=0.08)
             cb.set_label(label=f'Data-Fit (G) |<={cut_color}|', fontsize=18)
-            cb_m = plt.colorbar(sc_m, fraction=0.046, pad=0.05)
-            cb_m.set_label(label=f'Data-Fit (G)', fontsize=18)
+            if len(X[m]) > 0:
+                sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20, cmap='bwr')
+                cb_m = plt.colorbar(sc_m, fraction=0.046, pad=0.05)
+                cb_m.set_label(label=f'Data-Fit (G)', fontsize=18)
+            # if scale by size, use below
+            # sc_m = ax2.scatter(X[m], Y[m], c=data_fit_diff[m], s=20*np.abs(data_fit_diff[m])/max_dev, cmap='bwr')
             plt.title('Residual, Data-Fit', fontsize=20)
             ax2.set_xlabel(f'{x} ({units})', fontsize=18)
             ax2.set_ylabel(f'{y} ({units})', fontsize=18)
-            #ax.dist = 11 # default 10
+            ax.dist = dist # default 10
         # various remaining formatting steps
         X_l = np.min(X)
         X_h = np.max(X)

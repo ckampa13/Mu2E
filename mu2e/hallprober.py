@@ -514,7 +514,7 @@ class HallProbeGenerator(object):
 
         print('interpolation complete')
 
-def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom):
+def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, parallel):
     # FIXME! Better way than hardcoding "dPhi" in the query?
     if cfg_geom.geom == 'cyl':
         conditions_str = ' and '.join(conditions+(f'{step-np.pi/32} <= Phi <= {step+np.pi/32}',))
@@ -522,7 +522,7 @@ def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, 
         raise NotImplementedError('geom=="cart" is not implemented for the non-uniform grid plotting.')
     fig, ax = mu2e_plot3d_nonuniform_cyl(df, ABC[1], ABC[0], ABC[2], conditions=conditions_str, mode=cfg_plot.plot_type, cut_color=cfg_plot.zlims, info=None, save_dir=save_dir, save_name=None,
                                          df_fit=True, ptype='3d', aspect=aspect, cmin=None, cmax=None, fig=None, ax=None,
-                                         do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False)
+                                         do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False, parallel=parallel)
     return fig, ax
 
 
@@ -592,17 +592,18 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
     if plot_type == 'mpl_nonuni':
         if parallel:
             num_cpu = multiprocessing.cpu_count()
+            n_jobs = min(num_cpu, 16)
             # tqdm
             # plot_tups = Parallel(n_jobs=num_cpu)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom) for step in tqdm(steps, desc='Phi Step', total=len(steps)) for ABC in tqdm(ABC_geom[geom], desc='B component', total=len(ABC_geom[geom])))
             # no tqdm
-            plot_tups = Parallel(n_jobs=num_cpu)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom) for ABC in ABC_geom[geom] for step in steps)
+            plot_tups = Parallel(n_jobs=n_jobs)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, True) for ABC in ABC_geom[geom] for step in steps)
             # for tup in plot_tups:
             #     fig, ax = tup
         else:
             # WORKING BUT NOT PARALLEL
             for step in steps:
                 for ABC in ABC_geom[geom]:
-                    fig, ax = plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom)
+                    fig, ax = plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, False)
     # original 3d plots from Brian
     else:
         for step in steps:
@@ -631,7 +632,7 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
         plt.show()
 
 
-def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True):
+def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True, iterative=False):
     """Universal function to perform all types of hall probe measurements, plots, and further
     analysis.
 
@@ -686,7 +687,7 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         ZZ, RR, PP, Bz, Br, Bphi = ff.fit(cfg_params, cfg_pickle, profile=profile)
         return ZZ, RR, PP, Bz, Br, Bphi
     else:
-        ff.fit(cfg_params, cfg_pickle)
+        ff.fit(cfg_params, cfg_pickle, iterative=iterative)
 
     ff.merge_data_fit_res()
 
