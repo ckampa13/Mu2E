@@ -681,8 +681,33 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     print(hall_measure_data.head())
     print(hall_measure_data.columns)
     # raw_input()
+    # repeat with any fields to add on?
+    if cfg_params.cfg_calc_data is None:
+        calc_data = None
+    elif cfg_params.cfg_calc_data == "Calc_Bus":
+        raise NotImplementedError('Oh no! On-the-fly calculations of bus bar contributions using helicalc is not yet supported.')
+    # check for type "__main__.cfg_data" ??
+    else:
+        # note we really only need the data path. we assume other conditions are equivalent to main data.
+        cfg_calc_data = cfg_params.cfg_calc_data
+        # use Hall probe generator, but don't apply any bad calibrations.
+        input_calc_data = DataFrameMaker(cfg_calc_data.path, input_type='pkl').data_frame
+        # THIS ISN'T DOING THE QUERY
+        if not cfg_geom.do_selection:
+            input_calc_data = input_calc_data.query(' and '.join(cfg_data.conditions))
+        hpg_calc = HallProbeGenerator(input_calc_data, z_steps=cfg_geom.z_steps,
+                                      r_steps=cfg_geom.r_steps, phi_steps=cfg_geom.phi_steps,
+                                      x_steps=cfg_geom.x_steps, y_steps=cfg_geom.y_steps,
+                                      interpolate=cfg_geom.interpolate, do2pi=cfg_geom.do2pi,
+                                      do_selection=cfg_geom.do_selection)
+        hall_measure_data_calc = hpg_calc.sparse_field
+        # now grab calculated values
+        br_calc_data = hall_measure_data_calc['Br'].values
+        bphi_calc_data = hall_measure_data_calc['Bphi'].values
+        bz_calc_data = hall_measure_data_calc['Bz'].values
+        calc_data = {'br': br_calc_data, 'bphi': bphi_calc_data, 'bz': bz_calc_data}
 
-    ff = FieldFitter(hall_measure_data)
+    ff = FieldFitter(hall_measure_data, calc_data)
     if profile:
         ZZ, RR, PP, Bz, Br, Bphi = ff.fit(cfg_params, cfg_pickle, profile=profile)
         return ZZ, RR, PP, Bz, Br, Bphi

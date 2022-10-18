@@ -82,9 +82,17 @@ class FieldFitter:
         result (lmfit.ModelResult): Container for resulting fit information, inherited from `lmfit`
 
     """
-    def __init__(self, input_data):
+    def __init__(self, input_data, calc_data=None):
         self.input_data = input_data
         self.pickle_path = mu2e_ext_path+'fit_params/'
+        if calc_data is not None:
+            self.br_calc_data = calc_data['br']
+            self.bphi_calc_data = calc_data['bphi']
+            self.bz_calc_data = calc_data['bz']
+        else:
+            self.br_calc_data = None
+            self.bphi_calc_data = None
+            self.bz_calc_data = None
 
     def fit(self, cfg_params, cfg_pickle, iterative=False):
         if iterative:
@@ -128,6 +136,8 @@ class FieldFitter:
                     pass
             else:
                 self.redchi_dec = False
+                # CAUTION!
+                # self.redchi_dec = True
             # self.N_nan_stderr, self.non_vary_list = self.set_nan_stderr_non_vary()
             self.N_nan_stderr = self.set_nan_stderr_non_vary()
             # self.i_fit += 1
@@ -144,6 +154,9 @@ class FieldFitter:
 
 
     def prep_fit_func(self, cfg_params, cfg_pickle):
+        # error if calc data not supplied and needed
+        if (cfg_params.cfg_calc_data is not None) and (self.br_calc_data is None):
+            raise ValueError("Supplied cfg_params expected calculated data, but none were supplied in FieldFitter constructor. Please note this is only supported for function versions: [1000,]")
         func_version = cfg_params.version
         # self.Bz           = []
         # self.Br           = []
@@ -192,7 +205,8 @@ class FieldFitter:
                 pvd['pitch1'], pvd['ms_h1'], pvd['ns_h1'],
                 pvd['pitch2'], pvd['ms_h2'], pvd['ns_h2'],
                 pvd['length1'], pvd['ms_c1'], pvd['ns_c1'],
-                pvd['length2'], pvd['ms_c2'], pvd['ns_c2'])
+                pvd['length2'], pvd['ms_c2'], pvd['ns_c2'],
+                self.bz_calc_data, self.br_calc_data, self.bphi_calc_data)
         elif func_version == 1001:
             self.fit_func = ff.brzphi_3d_producer_giant_function_v1001(
                 self.ZZ, self.RR, self.PP,
@@ -373,32 +387,32 @@ class FieldFitter:
             self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
                                        # weights=np.concatenate([mag, mag, mag]).ravel(),
                                        r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
-                                       # method='leastsq', fit_kws={'maxfev': 10000})
-                                       method='least_squares', fit_kws={'verbose': 1,
-                                                                        'gtol': 1e-10,
-                                                                        'ftol': 1e-10,
-                                                                        'xtol': 1e-10,
-                                                                        'loss': cfg_params.loss,
-                                                                        })
+                                       method='leastsq', fit_kws={'maxfev': 10000})
+                                       # method='least_squares', fit_kws={'verbose': 1,
+                                       #                                  'gtol': 1e-10,
+                                       #                                  'ftol': 1e-10,
+                                       #                                  'xtol': 1e-10,
+                                       #                                  'loss': cfg_params.loss,
+                                       #                                  })
         else:
             # mag = 1/np.sqrt(Br**2+Bz**2+Bphi**2)
             self.result = self.mod.fit(np.concatenate([self.Br, self.Bz, self.Bphi]).ravel(),
                                        # weights=np.concatenate([mag, mag, mag]).ravel(),
                                        r=self.RR, z=self.ZZ, phi=self.PP, x=self.XX, y=self.YY, params=self.params,
                                        scale_covar=False,
-                                       # method='leastsq', fit_kws={'maxfev': 10000})
-                                       method='least_squares', fit_kws={'verbose': 1,
-                                                                        # 'gtol': 1e-15,
-                                                                        # 'ftol': 1e-15,
-                                                                        # #'xtol': 1e-20,
-                                                                        # 'xtol': 1e-15,
-                                                                        'gtol': 1e-10,
-                                                                        'ftol': 1e-10,
-                                                                        'xtol': 1e-10,
-                                                                        'loss': cfg_params.loss,
-                                       #                                  # NOT ALLOWED!
-                                       #                                  #'method': 'lm', # default: trf
-                                                                        })
+                                       method='leastsq', fit_kws={'maxfev': 10000})
+                                       # method='least_squares', fit_kws={'verbose': 1,
+                                       #                                  # 'gtol': 1e-15,
+                                       #                                  # 'ftol': 1e-15,
+                                       #                                  # #'xtol': 1e-20,
+                                       #                                  # 'xtol': 1e-15,
+                                       #                                  'gtol': 1e-10,
+                                       #                                  'ftol': 1e-10,
+                                       #                                  'xtol': 1e-10,
+                                       #                                  'loss': cfg_params.loss,
+                                       # #                                  # NOT ALLOWED!
+                                       # #                                  #'method': 'lm', # default: trf
+                                       #                                  })
                                        ##                                   # 'tr_solver': 'lsmr',
                                        ##                                   # 'tr_options':
                                        ##                                   # {'regularize': True}
@@ -528,6 +542,9 @@ class FieldFitter:
             self.params.add('ns_c2', value=cfg_params.ns_c2, vary=False)
         else:
             self.params['ns_c2'].value = cfg_params.ns_c2
+        # max asymmetric terms
+        if 'ms_asym_max' not in self.params:
+            self.params.add('ms_asym_max', value=cfg_params.ms_asym_max, vary=False)
 
     def add_params_hel(self, num):
         ms_range = range(self.params[f'ms_h{num}'].value)
@@ -713,10 +730,17 @@ class FieldFitter:
         ns_range = range(self.params[f'ns_c{num}'].value)
         # np.random.seed(101)
         # why do we initialize d like this?
-        # d_vals = np.linspace(0, 1, len(ns_range))[::-1]
-        d_vals = 0.5*np.ones(len(ns_range))
+        ##d_vals = np.linspace(0, 1, len(ns_range))[::-1]
+        # d_vals = np.linspace(0, 1, len(ns_range))
+        # d_vals = 0.5*np.ones(len(ns_range))
+        d_vals = np.zeros(len(ns_range))
+        # is there a max for the asymmetric terms?
+        m_max = self.params['ms_asym_max'].value
+        if m_max < 0:
+            m_max = np.inf
 
         # kludge for now...FIXME!
+        # no asymmetric terms here
         if self.params[f'ns_c{num}'].value < 2:
             for m in ms_range:
                 for n in ns_range:
@@ -732,20 +756,28 @@ class FieldFitter:
                         # seems like a weird initialization...
                         if f'Ac{num}_{m}_{n}' not in self.params:
                             # self.params.add(f'Ac{num}_{m}_{n}', value=1e-6, vary=True)
-                            self.params.add(f'Ac{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
+                            self.params.add(f'Ac{num}_{m}_{n}', value=0, vary=True)
+                            # self.params.add(f'Ac{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
                             # self.params.add(f'Ac{num}_{m}_{n}', value=-1*(-1)**m, min=-1e5, max=1e5, vary=True)
                             # self.params.add(f'Ac{num}_{m}_{n}', value=0, min=-1e4, max=1e4, vary=True)
+                            # self.params.add(f'Ac{num}_{m}_{n}', value=0, vary=False)
                         if f'Bc{num}_{m}_{n}' not in self.params:
                             # self.params.add(f'Bc{num}_{m}_{n}', value=-1e-6, vary=True)
-                            self.params.add(f'Bc{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
+                            self.params.add(f'Bc{num}_{m}_{n}', value=0, vary=True)
+                            # self.params.add(f'Bc{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
                             # self.params.add(f'Bc{num}_{m}_{n}', value=-1*(-1)**m, min=-1e5, max=1e5, vary=True)
                             # self.params.add(f'Bc{num}_{m}_{n}', value=0, min=-1e4, max=1e4, vary=True)
+                            # self.params.add(f'Bc{num}_{m}_{n}', value=0, vary=False)
                         if f'Dc{num}_{n}' not in self.params:
                             self.params.add(f'Dc{num}_{n}', value=0.0,
                                             min=0, max=1, vary=False)
         else:
             for m in ms_range:
                 for n in ns_range:
+                    if (m > m_max) & (n > 0):
+                        var = False
+                    else:
+                        var = True
                     # if (n-1) % 4!= 0:
                     if n == -1:
                         if f'Ac{num}_{m}_{n}' not in self.params:
@@ -756,17 +788,21 @@ class FieldFitter:
                             self.params.add(f'Dc{num}_{n}', value=0, min=0, max=1, vary=False)
                     else:
                         if f'Ac{num}_{m}_{n}' not in self.params:
-                            self.params.add(f'Ac{num}_{m}_{n}', value=0., vary=True)
+                            self.params.add(f'Ac{num}_{m}_{n}', value=0., vary=var)
                             # self.params.add(f'Ac{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
                             # self.params.add(f'Ac{num}_{m}_{n}', value=-1*(-1)**m, min=-1e4, max=1e4, vary=True)
+                            # self.params.add(f'Ac{num}_{m}_{n}', value=0, vary=False)
                         if f'Bc{num}_{m}_{n}' not in self.params:
-                            self.params.add(f'Bc{num}_{m}_{n}', value=0., vary=True)
+                            self.params.add(f'Bc{num}_{m}_{n}', value=0., vary=var)
                             # self.params.add(f'Bc{num}_{m}_{n}', value=-1*(-1)**m, vary=True)
                             # self.params.add(f'Bc{num}_{m}_{n}', value=-1*(-1)**m, min=-1e4, max=1e4, vary=True)
+                            # self.params.add(f'Bc{num}_{m}_{n}', value=0., min=-1e4, max=1e4, vary=True)
+                            # self.params.add(f'Bc{num}_{m}_{n}', value=0, vary=False)
                         if f'Dc{num}_{n}' not in self.params:
+                            # self.params.add(f'Dc{num}_{n}', value=d_vals[n],
+                            #                 min=0, max=1, vary=True)
                             self.params.add(f'Dc{num}_{n}', value=d_vals[n],
-                                            min=0, max=1, vary=True)
-                                            # min=-1, max=1, vary=True)
+                                            min=0, max=1, vary=False)
 
     def add_params_cart_simple(self, cfg_params):
         ks_dict = cfg_params.ks_dict
