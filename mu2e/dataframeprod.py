@@ -198,10 +198,14 @@ class DataFrameMaker(object):
                 skiprows=4)
 
         elif 'Mau13' in self.field_map_version:
-            self.data_frame = pd.read_csv(
-                self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
-                skiprows=4)
-
+            try:
+                self.data_frame = pd.read_csv(
+                    self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
+                    skiprows=4)
+            except:
+                self.data_frame = pd.read_csv(
+                    self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
+                    skiprows=4)
         elif 'Cole' in self.field_map_version:
             self.data_frame = pd.read_csv(
                 self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
@@ -802,16 +806,41 @@ if __name__ == "__main__":
     # helicalc (PS+TS, DS helicalc coils, no busbars, no interlayer connects)
     # all scaling is correct (m and G)
     # note adding file extension is a bit of a kludge
-    ddir = '/home/shared_data/'
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only.pkl',
+    #     input_type='pkl', field_map_version='helicalc_coils_only')
+    # # check which...
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # # data_maker.do_basic_modifications(-3.904, descale=False)
+    #######
+    # alternate DS11, with DS coils as ideal solenoids
+    # ddir = '/home/shared_data/'
+    # data_maker = DataFrameMaker(
+    #     ddir+'Bmaps/CVMFS/DSMap_altDS11',
+    #     input_type='csv', field_map_version='Mau13_altDS11')
+    # # check which...
+    # data_maker.do_basic_modifications(-3.896, descale=True)
+    # # data_maker.do_basic_modifications(-3.904, descale=False)
+    # alternate DS11, helical windings
     data_maker = DataFrameMaker(
-        ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only.pkl',
-        input_type='pkl', field_map_version='helicalc_coils_only')
+         mu2e_ext_path+'Bmaps/DS_conductor_breakdown/Mu2e_V13_altDS11_DS_Helicalc_All_Coils_All_Busbars.pkl',
+        input_type='pkl', field_map_version='Mau13_altDS11_helical')
     # check which...
     data_maker.do_basic_modifications(-3.896, descale=False)
     # data_maker.do_basic_modifications(-3.904, descale=False)
+    # Mau13, helical windings rerun
+    # data_maker = DataFrameMaker(
+    #      mu2e_ext_path+'Bmaps/DS_conductor_breakdown/Mu2e_V13_DS_Helicalc_All_Coils_All_Busbars.pkl',
+    #     input_type='pkl', field_map_version='Mau13_helical')
+    # # check which...
+    # data_maker.do_basic_modifications(-3.896, descale=False)
+    # # data_maker.do_basic_modifications(-3.904, descale=False)
 
-    data_maker.make_dump()
+
+    # data_maker.make_dump()
     # data_maker.make_dump('_noOffset')
     # data_maker.make_dump('_FIXED')
+    data_maker.make_dump('.Mu2E')
     print(data_maker.data_frame.head())
     print(data_maker.data_frame.tail())

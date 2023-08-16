@@ -732,8 +732,8 @@ class FieldFitter:
         # why do we initialize d like this?
         ##d_vals = np.linspace(0, 1, len(ns_range))[::-1]
         # d_vals = np.linspace(0, 1, len(ns_range))
-        # d_vals = 0.5*np.ones(len(ns_range))
-        d_vals = np.zeros(len(ns_range))
+        d_vals = 0.5*np.ones(len(ns_range))
+        # d_vals = np.zeros(len(ns_range))
         # is there a max for the asymmetric terms?
         m_max = self.params['ms_asym_max'].value
         if m_max < 0:
@@ -801,8 +801,14 @@ class FieldFitter:
                         if f'Dc{num}_{n}' not in self.params:
                             # self.params.add(f'Dc{num}_{n}', value=d_vals[n],
                             #                 min=0, max=1, vary=True)
-                            self.params.add(f'Dc{num}_{n}', value=d_vals[n],
-                                            min=0, max=1, vary=False)
+                            if n > 0:
+                                D_var = True
+                                dval = d_vals[n]
+                            else:
+                                D_var = False
+                                dval = 0.
+                            self.params.add(f'Dc{num}_{n}', value=dval,
+                                            min=0, max=1, vary=D_var)
 
     def add_params_cart_simple(self, cfg_params):
         ks_dict = cfg_params.ks_dict

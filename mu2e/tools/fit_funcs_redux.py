@@ -2320,6 +2320,7 @@ def brzphi_3d_producer_giant_function(z, r, phi,
             # jv_c2[m_c2][n_c2] = special.jv(n_c2, cms2[m_c2]*r)
             # jvp_c2[m_c2][n_c2] = special.jvp(n_c2, cms2[m_c2]*r)
 
+    # PAPER CALLS THIS LEFT HANDED
     @njit(parallel=True)
     def calc_b_fields_helR(z, phi, r, hms, n, A, B, iv, ivp, model_r, model_z, model_phi):
         for i in prange(z.shape[0]):
@@ -2330,11 +2331,12 @@ def brzphi_3d_producer_giant_function(z, r, phi,
             model_z[i] += hms * \
                 (iv[i]*(-A*np.sin(hms*z[i]+n*phi[i]) +
                         B*np.cos(hms*z[i]+n*phi[i])))
+            if abs(r[i]) >= 1e-5:
+                model_phi[i] += (1.0/r[i]) * \
+                    -(n*iv[i]*(A*np.sin(hms*z[i]+n*phi[i]) -
+                               B*np.cos(hms*z[i]+n*phi[i])))
 
-            model_phi[i] += (1.0/r[i]) * \
-                -(n*iv[i]*(A*np.sin(hms*z[i]+n*phi[i]) -
-                           B*np.cos(hms*z[i]+n*phi[i])))
-
+    # PAPER CALLS THIS RIGHT HANDED
     @njit(parallel=True)
     def calc_b_fields_helL(z, phi, r, hms, n, C, D, iv, ivp, model_r, model_z, model_phi):
         for i in prange(z.shape[0]):
@@ -2346,9 +2348,10 @@ def brzphi_3d_producer_giant_function(z, r, phi,
                 (iv[i]*(-C*np.sin(-hms*z[i]+n*phi[i]) +
                         D*np.cos(-hms*z[i]+n*phi[i])))
 
-            model_phi[i] += (1.0/r[i]) * \
-                -(n*iv[i]*(C*np.sin(-hms*z[i]+n*phi[i]) -
-                           D*np.cos(-hms*z[i]+n*phi[i])))
+            if abs(r[i]) >= 1e-5:
+                model_phi[i] += (1.0/r[i]) * \
+                    -(n*iv[i]*(C*np.sin(-hms*z[i]+n*phi[i]) -
+                               D*np.cos(-hms*z[i]+n*phi[i])))
 
     @njit(parallel=True)
     def calc_b_fields_cyl(z, phi, r, cms, n, A, B, D, iv, ivp, model_r, model_z, model_phi):
@@ -2439,6 +2442,8 @@ def brzphi_3d_producer_giant_function(z, r, phi,
         model_z = np.zeros(z.shape, dtype=np.float64)
         model_phi = np.zeros(z.shape, dtype=np.float64)
 
+        # ms_h1 LH ??
+        # PAPER CALLS THIS RIGHT HANDED
         for m in range(ms_h1):
             for n in range(ns_h1):
                 A = AB_params[f'Ah1_{m}_{n}']
@@ -2448,18 +2453,23 @@ def brzphi_3d_producer_giant_function(z, r, phi,
                 calc_b_fields_helR(z, phi, r, hms1[m], n, A, B, iv_h1[m][n], ivp_h1[m][n],
                                    model_r, model_z, model_phi)
 
+                # CHECK! I don't think this goes here...
+                # It might, but this is stil a weird way to initialize.
                 calc_b_fields_helL(z, phi, r, hms1[m], n, C, D, iv_h1[m][n], ivp_h1[m][n],
                                    model_r, model_z, model_phi)
 
+        # ms_h2 RH ??
+        # PAPER CALLS THIS LEFT HANDED
         for m in range(ms_h2):
             for n in range(ns_h2):
                 A = AB_params[f'Ah2_{m}_{n}']
                 B = AB_params[f'Bh2_{m}_{n}']
                 C = AB_params[f'Ch2_{m}_{n}']
                 D = AB_params[f'Dh2_{m}_{n}']
+                # CHECK! I don't think this goes here...
+                # It might, but this is stil a weird way to initialize.
                 calc_b_fields_helR(z, phi, r, hms2[m], n, A, B, iv_h2[m][n], ivp_h2[m][n],
                                    model_r, model_z, model_phi)
-
                 calc_b_fields_helL(z, phi, r, hms2[m], n, C, D, iv_h2[m][n], ivp_h2[m][n],
                                    model_r, model_z, model_phi)
 

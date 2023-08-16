@@ -87,9 +87,9 @@ def make_plot_hist(df, name='Mau9 70%', var='tand_Mau9_70', xl=r'$\tan(\mathrm{d
 if __name__=='__main__':
     # check plot output directory and create if doesn't exist
     #######
-    B_dir = 'cartesian_test' # done
+    #B_dir = 'cartesian_test' # done
     # B_dir = 'default' # done
-    # B_dir = 'k2_test' # done
+    B_dir = 'k2_test' # done
     # B_dir = 'delta_Z_tests' # done
     # B_dir = 'hp_bias' # done
     # B_dir = 'ensemble_random_scale_factor' # done
@@ -119,4 +119,10 @@ if __name__=='__main__':
         # fig, ax = make_plot_hist(df, var='deltaP', xl=xl, query=None, queryn='', bins=np.linspace(-1000,1000,201), legendloc='upper left', plotdir=plotdir, Bname=f[:-2], fig=fig, ax=ax)
         # fig, ax = make_plot_hist(df, var='deltaP', xl=xl, query=None, queryn='', bins=np.linspace(-50,50,51), legendloc='upper left', plotdir=plotdir, Bname=f[:-2], fig=fig, ax=ax)
         fig, ax = make_plot_hist(df, var='deltaP', xl=xl, query=None, queryn='', bins=20, legendloc='upper left', plotdir=plotdir, Bname=f[:-2], fig=fig, ax=ax, save=True)
+        # ALTERATION FOR MSC SEMINAR
+        ax.plot([0., 0.], [0., 150.], 'r--')
+        ax.set_xlim([-100, 100])
+        ax.set_ylim([0, 145])
+        fig.savefig(f'/home/ckampa/data/plots/html/deltaP/MSC_June2023/{B_dir}_{f}_wide.pdf')
+        fig.savefig(f'/home/ckampa/data/plots/html/deltaP/MSC_June2023/{B_dir}_{f}_wide.png')
         # plt.show()
