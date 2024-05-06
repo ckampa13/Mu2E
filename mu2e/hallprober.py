@@ -34,12 +34,7 @@ Example:
 
 
         # Introduce miscalibrations
-        In [12]: if cfg_geom.bad_calibration[0]:
-        ...         hpg.bad_calibration(measure = True, position = False, rotation = False)
-        ...      if cfg_geom.bad_calibration[1]:
-        ...         hpg.bad_calibration(measure = False, position = True, rotation=False)
-        ...      if cfg_geom.bad_calibration[2]:
-        ...         hpg.bad_calibration(measure = False, position = False, rotation = True)
+        # Do something here with uncertainties
 
         In [13]: print hpg.get_toy().head()
         Out[13]:
@@ -76,6 +71,7 @@ import os
 import time
 import shutil
 import math
+import copy
 import collections
 import warnings
 import six.moves.cPickle as pkl
@@ -87,14 +83,18 @@ from scipy.interpolate import Rbf
 import mu2e
 from mu2e.dataframeprod import DataFrameMaker
 from mu2e.fieldfitter_redux2 import FieldFitter
-from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_cyl
+from mu2e.mu2eplots import mu2e_plot3d, mu2e_plot3d_nonuniform_test, mu2e_plot3d_nonuniform_cyl
+from mu2e.syst_unc import laserunc, metunc, apply_field_unc
 from mu2e import mu2e_ext_path
 import imp
 from six.moves import range
 # parallelization
-from tqdm import tqdm
 from joblib import Parallel, delayed
 import multiprocessing
+from lmfit import Model
+import re
+from scipy.stats import t
+from scipy.special import erf
 interp_studies = imp.load_source(
     'interp_studies', '/home/ckampa/coding/Mu2E/scripts/FieldFitting/interp_studies.py')
 
@@ -155,13 +155,14 @@ class HallProbeGenerator(object):
     def __init__(self, input_data, z_steps=None, x_steps=None,
                  y_steps=None, r_steps=None, phi_steps=None, interpolate=False,
                  do2pi=False, do_selection=True):
-        self.full_field = input_data
+        self.full_field = input_data        
         self.sparse_field = self.full_field
         self.r_steps = r_steps
         self.z_steps = z_steps
         self.x_steps = x_steps
         self.y_steps = y_steps
         self.phi_steps = phi_steps
+
         # modify sparse_field if necessary
         if do_selection:
             if self.phi_steps:
@@ -183,11 +184,8 @@ class HallProbeGenerator(object):
             if interpolate is not False:
                 self.interpolate_points(interpolate)
             else:
-                # complicated indexing
-                # (because phi values must be "close", but R and Z can be exact matches)
-                # print(self.sparse_field.Phi)
-                # print(self.phi_nphi_steps)
-                # print(np.ravel(self.r_steps))
+                # Require exact match for z, 'isclose' for R / Phi (in case of rounding
+                # errors due to conversion from cartesian)
                 self.sparse_field = self.sparse_field[
                     (np.isclose(self.sparse_field.Phi.values[:, None],
                                 self.phi_nphi_steps).any(axis=1)) &
@@ -195,26 +193,6 @@ class HallProbeGenerator(object):
                                 np.ravel(self.r_steps)).any(axis=1)) &
                     (self.sparse_field.Z.isin(self.z_steps))]
                 self.sparse_field = self.sparse_field.sort_values(['Z', 'R', 'Phi'])
-                # print(self.z_steps)
-                # print(self.phi_nphi_steps)
-                # print(self.full_field.Phi.unique())
-                # print(self.sparse_field)
-                # input()
-
-                # self.apply_selection('Z', z_steps)
-                # if r_steps:
-                #     self.apply_selection('R', r_steps)
-                #     self.apply_selection('Phi', phi_steps)
-                #     self.phi_steps = phi_steps
-                # else:
-                #     self.apply_selection('X', x_steps)
-                #     self.apply_selection('Y', y_steps)
-
-            # for mag in ['Bz', 'Br', 'Bphi', 'Bx', 'By', 'Bz']:
-            #     try:
-            #         self.sparse_field.eval('{0}err = abs(0.0001*{0}+1e-15)'.format(mag), inplace=True)
-            #     except:
-            #         pass
         # otherwise use the entire dataset
         else:
             self.sparse_field = self.sparse_field.sort_values(['Z', 'R', 'Phi'])
@@ -297,88 +275,6 @@ class HallProbeGenerator(object):
         warnings.warn(("`get_toy()` is deprecated, please use the `sparse_field` class member"),
                       DeprecationWarning)
         return self.sparse_field
-
-    def bad_calibration(self, measure=False, position=False, rotation=False, seed=None):
-        print(seed)
-        """
-        Manipulate the `sparse_field` member values, in order to mimic imperfect measurement
-        scenarios. By default, no manipulations are performed.
-
-        Args:
-            measure (bool, optional): Apply a hard-coded measurement error.
-            position (bool, optional): Apply a hard-coded positional error.
-            rotation (bool, optional): Apply a hard-coded rotational error.
-            seed (int, optional): Input a seed value to generate a replicable set of error
-                values.
-
-        Returns:
-            Nothing, modifies `sparse_field` class member.
-        """
-        if seed is None:
-            # measure_sf = [1-2.03e-4, 1+1.48e-4, 1-0.81e-4, 1-1.46e-4, 1-0.47e-4]
-            # measure_sf = [1-2.58342250e-05, 1-5.00578244e-05, 1+4.87132812e-05, 1+7.79452585e-05,
-            #               1+1.85119047e-05]  # uniform(-0.0001, 0.0001)
-            if measure == True:
-                # COLE ONE HALL PROBE BIASED BY 1e-3
-                measure_sf = [1., 1., 1. + 1e-3, 1., 1.] # middle probe bias up
-            else:
-                measure_sf = measure # pass in scale factors
-            # pos_offset = [-1.5, 0.23, -0.62, 0.12, -0.18]
-            pos_offset = [0.9557545, 0.7018995, -0.8877238, 0.3336723, -0.4361852]  # uniform(-1, 1)
-            # rotation_angle = [ 0.00047985,  0.00011275,  0.00055975, -0.00112114,  0.00051197]
-            # rotation_angle = [ 0.0005,  0.0004,  0.0005, 0.0003,  0.0004]
-            rotation_angle = [6.58857659e-05, -9.64816467e-05, 8.92011209e-05, 4.42270175e-05,
-                              -7.09926476e-05]
-        else:
-            np.random.seed(seed)
-            measure_sf = np.random.uniform(-1e-4, 1e-4, 5)+1
-            pos_offset = np.random.normal(0, 1, 5)
-            rotation_angle = np.random.normal(0, 1e-4, 5)
-
-        for phi in self.phi_steps:
-            probes = self.sparse_field[np.isclose(self.sparse_field.Phi, phi)].R.unique()
-            # if measure:
-            if measure != False:
-                print('using measure sfs:', end=' ')
-                print(measure_sf)
-                if len(probes) > len(measure_sf):
-                    raise IndexError('need more measure_sf, too many probes')
-                for i, probe in enumerate(probes):
-                    # DataFrame.ix DEPRECATED
-                    self.sparse_field.loc[
-                        (abs(self.sparse_field.R) == probe), 'Bz'] *= measure_sf[i]
-                    self.sparse_field.loc[
-                        (abs(self.sparse_field.R) == probe), 'Br'] *= measure_sf[i]
-                    self.sparse_field.loc[
-                        (abs(self.sparse_field.R) == probe), 'Bphi'] *= measure_sf[i]
-
-            if position:
-                print('using pos offsets:', end=' ')
-                print(pos_offset)
-                if len(probes) > len(pos_offset):
-                    raise IndexError('need more pos_offset, too many probes')
-                for i, probe in enumerate(probes):
-                    if probe == 0:
-                        self.sparse_field.ix[
-                            abs(self.sparse_field.R) == probe, 'R'] += pos_offset[i]
-                    else:
-                        self.sparse_field.ix[
-                            abs(self.sparse_field.R) == probe, 'R'] += pos_offset[i]
-                        self.sparse_field.ix[
-                            abs(self.sparse_field.R) == -probe, 'R'] -= pos_offset[i]
-
-            if rotation:
-                print('using rot angles:', end=' ')
-                print(rotation_angle)
-                if len(probes) > len(rotation_angle):
-                    raise IndexError('need more rotation_angle, too many probes')
-                for i, probe in enumerate(probes):
-                    tmp_Bz = self.sparse_field[self.sparse_field.R == probe].Bz
-                    tmp_Br = self.sparse_field[self.sparse_field.R == probe].Br
-                    self.sparse_field.ix[(abs(self.sparse_field.R) == probe), 'Bz'] = (
-                        tmp_Br*np.sin(rotation_angle[i])+tmp_Bz*np.cos(rotation_angle[i]))
-                    self.sparse_field.ix[(abs(self.sparse_field.R) == probe), 'Br'] = (
-                        tmp_Br*np.cos(rotation_angle[i])-tmp_Bz*np.sin(rotation_angle[i]))
 
     def interpolate_points(self, version=1):
         """Method for obtaining required selection through interpolation.  Work in progress."""
@@ -513,7 +409,8 @@ class HallProbeGenerator(object):
                      pkl.HIGHEST_PROTOCOL)
 
         print('interpolation complete')
-
+# Not being used - check if we would want this for some purpose
+'''
 def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, parallel):
     # FIXME! Better way than hardcoding "dPhi" in the query?
     if cfg_geom.geom == 'cyl':
@@ -525,8 +422,8 @@ def plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, 
                                          do_title=True, title_simp=None, do2pi=cfg_geom.do2pi, units='m', show_plot=False, parallel=parallel)
     return fig, ax
 
-
-def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', parallel=True):
+'''
+def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', parallel=True, df_fine=None):
     """Make a series of comparison plots with the fit output and hallprobe input.
 
     This function takes input DFs and `namedtuple` config files, and generates a comprehensive
@@ -589,47 +486,26 @@ def make_fit_plots(df, cfg_data, cfg_geom, cfg_plot, name, aspect='square', para
         save_dir = mu2e.mu2e_ext_path+'plots/html/'+name
         # save_dir = '/home/ckampa/Plots/FieldFitting/'+name
 
-    if plot_type == 'mpl_nonuni':
-        if parallel:
-            num_cpu = multiprocessing.cpu_count()
-            n_jobs = min(num_cpu, 16)
-            # tqdm
-            # plot_tups = Parallel(n_jobs=num_cpu)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom) for step in tqdm(steps, desc='Phi Step', total=len(steps)) for ABC in tqdm(ABC_geom[geom], desc='B component', total=len(ABC_geom[geom])))
-            # no tqdm
-            plot_tups = Parallel(n_jobs=n_jobs)(delayed(plot_parallel_helper)(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, True) for ABC in ABC_geom[geom] for step in steps)
-            # for tup in plot_tups:
-            #     fig, ax = tup
-        else:
-            # WORKING BUT NOT PARALLEL
-            for step in steps:
-                for ABC in ABC_geom[geom]:
-                    fig, ax = plot_parallel_helper(step, ABC, conditions, df, cfg_plot, save_dir, aspect, cfg_geom, False)
-    # original 3d plots from Brian
-    else:
-        for step in steps:
-            for ABC in ABC_geom[geom]:
-                if geom == 'cyl':
-                    conditions_str = ' and '.join(conditions+('Phi=={}'.format(step),))
-                else:
-                    conditions_str = ' and '.join(conditions+('Y=={}'.format(step),))
-                # FIXME! This is the figure object, not save name
+    for step in steps:
+        for ABC in ABC_geom[geom]:
+            if geom == 'cyl':
+                conditions_str = ' and '.join(conditions+('Phi=={}'.format(step),))
+            else:
+                conditions_str = ' and '.join(conditions+('Y=={}'.format(step),))
+            # FIXME! This is the figure object, not save name
+            if plot_type == 'mpl_nonuni':
+                mu2e_plot3d_nonuniform_test(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
+                                            df_fit=True, mode=plot_type, save_dir=save_dir,
+                                            do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine)
+            else:
                 save_name = mu2e_plot3d(df, ABC[0], ABC[1], ABC[2], conditions=conditions_str,
                                         df_fit=True, mode=plot_type, save_dir=save_dir,
-                                        do2pi=cfg_geom.do2pi, units='m')
+                                        do2pi=cfg_geom.do2pi, units='m', df_fine=df_fine)
+                
 
-                # If we are saving the plotly_html, we also want to download stills
-                # and transfer them to the appropriate save location.
-                if plot_type == 'plotly_html_img':
-                    # FIXME! see above about save_name.
-                    init_loc = '/home/ckampa/Downloads/'+save_name+'.jpeg'
-                    final_loc = save_dir+'/'+save_name+'.jpeg'
-                    while not os.path.exists(init_loc):
-                            print('waiting for', init_loc, 'to download')
-                            time.sleep(2)
-                    shutil.move(init_loc, final_loc)
-
-    if plot_type in ['mpl', 'mpl_nonuni']:
-        plt.show()
+    # TODO add flag to turn on / off showing plots
+    #if plot_type in ['mpl', 'mpl_nonuni']:
+    #    plt.show()
 
 
 def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plot, profile=False, aspect='square', parallel_plots=True, iterative=False):
@@ -652,45 +528,57 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     """
 
     plt.close('all')
-    input_data = DataFrameMaker(cfg_data.path, input_type='pkl').data_frame
-    # THIS ISN'T DOING THE QUERY
+
+    # For position uncertainties, use posunc class method get_shifted_field to get map with
+    # field assessed at alternate coordinates
+    if cfg_geom.systunc is not None and ('LaserUnc' in cfg_geom.systunc or 'MetUnc' in cfg_geom.systunc):
+        print(f'Applying {cfg_geom.systunc} position uncertainty')
+        if cfg_geom.systunc.startswith('LaserUnc'):
+            myunc = laserunc(cfg_data.path)
+            myunc.transformations = pkl.load(open('transformations.pkl',"rb"))
+        else:
+            toy = cfg_geom.systunc.replace('MetUnc','')
+            myunc = metunc(cfg_data.path,toy)
+        input_data = myunc.get_shifted_field()
+    else:
+        input_data = DataFrameMaker(cfg_data.path, input_type='pkl').data_frame
+
     if not cfg_geom.do_selection:
         input_data = input_data.query(' and '.join(cfg_data.conditions))
-    # FIXME! Check whether this query should run during "standard" uniform grid running.
-    # else:
-    # ????
+
     hpg = HallProbeGenerator(input_data, z_steps=cfg_geom.z_steps,
                              r_steps=cfg_geom.r_steps, phi_steps=cfg_geom.phi_steps,
                              x_steps=cfg_geom.x_steps, y_steps=cfg_geom.y_steps,
                              interpolate=cfg_geom.interpolate, do2pi=cfg_geom.do2pi,
                              do_selection=cfg_geom.do_selection)
 
-    seed = None
-    if len(cfg_geom.bad_calibration) == 4:
-        seed = cfg_geom.bad_calibration[3]
+    if cfg_geom.systunc is not None and ('Calib' in cfg_geom.systunc or 'TempUnc' in cfg_geom.systunc):
+        print(f'Applying {cfg_geom.systunc} field uncertainty')
+        hall_measure_data = apply_field_unc(cfg_geom.systunc, hpg.sparse_field)
+    else:
+        hall_measure_data = hpg.sparse_field
 
-    if cfg_geom.bad_calibration[0]:
-        # hpg.bad_calibration(measure=True, position=False, rotation=False, seed=seed)
-        hpg.bad_calibration(measure=cfg_geom.bad_calibration[0], position=False, rotation=False, seed=seed)
-    if cfg_geom.bad_calibration[1]:
-        hpg.bad_calibration(measure=False, position=True, rotation=False, seed=seed)
-    if cfg_geom.bad_calibration[2]:
-        hpg.bad_calibration(measure=False, position=False, rotation=True, seed=seed)
-
-    hall_measure_data = hpg.sparse_field
+    # Smear input values by noise
+    #if cfg_params.noise is not None:
+    #    for field in ['Br','Bphi','Bz']:
+    #        noise_vec = np.random.normal(0,cfg_params.noise,hall_measure_data[field].shape[0])
+    #        hall_measure_data.loc[:,field] += noise_vec
+    #    hall_measure_data.eval('Bx = Br*cos(Phi)-Bphi*sin(Phi)', inplace=True)
+    #    hall_measure_data.eval('By = Bphi*cos(Phi)+Br*sin(Phi)', inplace=True)
+        
     print(hall_measure_data.head())
     print(hall_measure_data.columns)
-    # raw_input()
+
     # repeat with any fields to add on?
     if cfg_params.cfg_calc_data is None:
         calc_data = None
     elif cfg_params.cfg_calc_data == "Calc_Bus":
         raise NotImplementedError('Oh no! On-the-fly calculations of bus bar contributions using helicalc is not yet supported.')
-    # check for type "__main__.cfg_data" ??
     else:
+        # TODO currently not applying systematic uncertainties here
         # note we really only need the data path. we assume other conditions are equivalent to main data.
         cfg_calc_data = cfg_params.cfg_calc_data
-        # use Hall probe generator, but don't apply any bad calibrations.
+        # use Hall probe generator
         input_calc_data = DataFrameMaker(cfg_calc_data.path, input_type='pkl').data_frame
         # THIS ISN'T DOING THE QUERY
         if not cfg_geom.do_selection:
@@ -707,6 +595,8 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
         bz_calc_data = hall_measure_data_calc['Bz'].values
         calc_data = {'br': br_calc_data, 'bphi': bphi_calc_data, 'bz': bz_calc_data}
 
+    print("hall_measure_data")
+    print(hall_measure_data)
     ff = FieldFitter(hall_measure_data, calc_data)
     if profile:
         ZZ, RR, PP, Bz, Br, Bphi = ff.fit(cfg_params, cfg_pickle, profile=profile)
@@ -714,13 +604,117 @@ def field_map_analysis(name, cfg_data, cfg_geom, cfg_params, cfg_pickle, cfg_plo
     else:
         ff.fit(cfg_params, cfg_pickle, iterative=iterative)
 
-    ff.merge_data_fit_res()
+    saveunc = (cfg_geom.systunc is None) and not cfg_pickle.recreate and ('Unc' not in cfg_data.path)
+    iscart = (cfg_geom.geom == 'cart')
+    ff.merge_data_fit_res(saveunc,iscart)
+    print(ff.input_data)
 
+    if cfg_geom.systunc is not None: # True systematic --> save variant field and fit
+        pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_{cfg_geom.systunc}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+    elif cfg_pickle.recreate is False: # True nominal --> save nominal field and fit
+        #if cfg_params.noise is not None:
+        #    pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_noise{cfg_params.noise.replace(".","p")}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+        #else:
+        pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+    elif cfg_geom.geom == 'cart': #Special case --> save 'fitted' cartesian field
+        if (cfg_pickle.load_name.endswith('Unc') or 'Rebar' in cfg_pickle.load_name) and 'pinn' not in cfg_pickle.load_name:
+            pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+f'_{cfg_pickle.load_name.split("_")[-1]}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+        else:
+            pkl.dump(ff.input_data, open(cfg_data.path.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+
+    if cfg_plot.df_fine is not None:
+        df_fine = DataFrameMaker(cfg_plot.df_fine, input_type='pkl').data_frame
+        df_fine = df_fine.sort_values(['Z', 'R', 'Phi'])
+        print("df_fine")
+        print(df_fine)
+        # Need to manually define functional form
+        ff_fine = FieldFitter(df_fine, None)
+        from collections import namedtuple
+        pickle_temp = namedtuple('pickle_temp', 'use_pickle save_pickle load_name save_name recreate')
+
+        cfg_pickle_fine = pickle_temp(use_pickle=False, save_pickle=False,
+                                      load_name='fine',
+                                      save_name='fine', recreate=False)
+        ff_fine.prep_fit_func(cfg_params, cfg_pickle_fine)
+        model_fine = ff_fine.model()
+        fit_fine = model_fine.eval(r=df_fine.R.values, z=df_fine.Z.values, phi=df_fine.Phi.values, x=df_fine.X.values, y=df_fine.Y.values, params=ff.params)
+        df_fine.loc[:,'Br_fit']   = fit_fine[0:len(fit_fine)//3]
+        df_fine.loc[:,'Bz_fit']   = fit_fine[len(fit_fine)//3:2*len(fit_fine)//3]
+        df_fine.loc[:,'Bphi_fit'] = fit_fine[2*len(fit_fine)//3:]
+
+        # If fit uncertainties were saved in main fit, compute also for fine grid
+        if saveunc:
+            fit_unc = custom_eval_unc(model=model_fine, r=df_fine.R.values, z=df_fine.Z.values, phi=df_fine.Phi.values, x=df_fine.X.values, y=df_fine.Y.values, params=ff.params)
+            df_fine.loc[:,'Br_unc']   = fit_unc[0:len(fit_unc)//3]
+            df_fine.loc[:,'Bz_unc']   = fit_unc[len(fit_unc)//3:2*len(fit_unc)//3]
+            df_fine.loc[:,'Bphi_unc'] = fit_unc[2*len(fit_unc)//3:]
+            if cfg_params.noise is not None:
+                pkl.dump(df_fine, open(cfg_plot.df_fine.split('.')[0]+f'_noise{cfg_params.noise}.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+            else:
+                pkl.dump(df_fine, open(cfg_plot.df_fine.split('.')[0]+'.Mu2E.Fit.p', "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # 'Fit' to nominal with syst. params
+        elif cfg_pickle.load_name.endswith('Unc') and cfg_pickle.recreate:
+            pkl.dump(df_fine, open(cfg_plot.df_fine.split('.')[0]+f"_{cfg_pickle.load_name.split('_')[-1]}.Mu2E.Fit.p", "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # Fitting to variant DSCylFMSAll map, comparing against nominal DSCylFine (ex. fitting to PINN-subtracted systematic)
+        # TODO make this more inclusive
+        elif 'Unc' in cfg_data.path:
+            unc = [p for p in cfg_data.path.split('_') if 'Unc' in p][0]
+            pkl.dump(df_fine, open(cfg_plot.df_fine.split('.')[0]+f"_{unc}.Mu2E.Fit.p", "wb"), pkl.HIGHEST_PROTOCOL)
+
+        # In all other cases, name of DSCylFine fit should match DSCylFine map?
+        else:
+            pkl.dump(df_fine, open(cfg_plot.df_fine.split('.')[0]+".Mu2E.Fit.p", "wb"), pkl.HIGHEST_PROTOCOL)
+
+    else:
+        df_fine = None
     if cfg_plot.plot_type != 'none':
-        make_fit_plots(ff.input_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots)
-
+        make_fit_plots(ff.input_data, cfg_data, cfg_geom, cfg_plot, name, aspect=aspect, parallel=parallel_plots, df_fine=df_fine)
+        
     return hall_measure_data, ff
 
+def custom_eval_unc(model, params, **kwargs):
+    # Get variable params
+    var_names = []
+    for p in params.valuesdict().keys():
+        if params[p].vary:
+            var_names.append(p)
+    nvarys = len(var_names)
+    
+    # ensure fjac and df2 are correct size if independent var updated by kwargs
+    ndata = model.eval(params,**kwargs).size
+    fjac = np.zeros((nvarys, ndata))
+    df2 = np.zeros(ndata)
+    if any(p.stderr is None for p in params.values()):
+        print('Missing stderr for {p}, covariance is 0')
+        return df2
+
+    # find derivative by hand!
+    pars = params.copy()
+    for i in range(nvarys):
+        pname = var_names[i]
+        val0 = pars[pname].value
+        dval = pars[pname].stderr/3.0
+
+        pars[pname].value = val0 + dval
+        res1 = model.eval(pars, **kwargs)
+
+        pars[pname].value = val0 - dval
+        res2 = model.eval(pars, **kwargs)
+
+        pars[pname].value = val0
+        fjac[i] = (res1 - res2) * 1.5 
+
+    for i in range(nvarys):
+        for j in range(nvarys):
+            if i == j:
+                df2 += fjac[i]*fjac[j]
+            else:
+                df2 += fjac[i]*fjac[j]*params[var_names[i]].correl[var_names[j]]
+
+    prob = erf(1.0/np.sqrt(2))
+    return np.sqrt(df2) * t.ppf((prob+1)/2.0, ndata-nvarys)
 
 if __name__ == "__main__":
     pi = np.pi

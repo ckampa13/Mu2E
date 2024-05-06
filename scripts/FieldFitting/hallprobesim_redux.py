@@ -9,6 +9,7 @@ from mu2e import mu2e_ext_path
 from mu2e.src.make_csv import make_csv
 from six.moves import range
 from sys import argv
+import os
 
 ############################
 # defining the cfg structs #
@@ -16,858 +17,827 @@ from sys import argv
 
 cfg_data   = namedtuple('cfg_data', 'datatype magnet path conditions')
 cfg_geom   = namedtuple('cfg_geom', 'geom z_steps r_steps phi_steps x_steps y_steps '
-                        'bad_calibration interpolate do2pi do_selection')
-cfg_plot   = namedtuple('cfg_plot', 'plot_type zlims save_loc sub_dir')
+                        'systunc interpolate do2pi do_selection')
+cfg_plot   = namedtuple('cfg_plot', 'plot_type zlims save_loc sub_dir df_fine')
 cfg_params = namedtuple('cfg_params', 'pitch1 ms_h1 ns_h1 pitch2 ms_h2 ns_h2 '
                         ' length1 ms_c1 ns_c1 length2 ms_c2 ns_c2 '
                         ' ks_dict bs_tuples bs_bounds loss version '
-                        ' ms_asym_max cfg_calc_data', defaults=(-1, None))
+                        ' method ms_asym_max cfg_calc_data noise', defaults=('leastsq', -1, None, None))
 cfg_pickle = namedtuple('cfg_pickle', 'use_pickle save_pickle load_name save_name recreate')
 
 #################
 # the data cfgs #
 #################
 
-# path_DS_Mau13       = mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13'
-path_DS_Mau13       = mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13'
-path_DS_Mau13_coilshift       = mu2e_ext_path+'Bmaps/DSMap_coilshift'
-path_DS_Mau13_coilshift_bus   = mu2e_ext_path+'Bmaps/DSMap_coilshift_plus_bus'
+path_DS_Mau13        = mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13'
 
-path_Cole_250mm_short_cyl = mu2e_ext_path +\
-    'datafiles/FieldMapsCole/high_granularity_bfield_map_cylin_r250mm_p10cm_3846784pts_10-09_085027'
+path_DS_only                = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_SolCalc_DS_Only.Mu2E.p'
+path_all_coils              = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_SolCalc_All_Coils.Mu2E.p'
+path_DS_helicalc_coils      = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils.Mu2E.p'
+path_DS_helicalc_busbar     = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Busbars_Only.Mu2E.p'
+path_DS_helicalc_raw        = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars.pkl'
+path_DS_helicalc_all        = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars.Mu2E.p'
+path_DS_helicalc_pinn       = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_PINN_Subtracted.Mu2E.p'
+path_DSCartVal              = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars.Mu2E.p'
+path_DSCartVal_pinn         = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_PINN_Subtracted.Mu2E.p'
 
-path_Cole_250mm_long_cyl = mu2e_ext_path +\
-    'datafiles/FieldMapsCole/10x_bfield_map_cylin_985152pts_09-20_162454'
+path_DS_helicalc_rebar      = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_Rebar.Mu2E.p'
+path_DS_helicalc_rebarup    = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_RebarUpUnc.Mu2E.p'
+path_DS_helicalc_rebardo    = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_RebarDownUnc.Mu2E.p'
+path_DS_rebar_pinn          = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_Rebar_PINN_Subtracted.Mu2E.p'
+path_DS_rebarup_pinn        = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_RebarUpUnc_PINN_Subtracted.Mu2E.p'
+path_DS_rebardo_pinn        = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_RebarDownUnc_PINN_Subtracted.Mu2E.p'
+path_DSCartVal_rebar        = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_Rebar.Mu2E.p'
+path_DSCartVal_rebar_pinn   = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_Rebar_PINN_Subtracted.Mu2E.p'
+path_DSCartVal_rebarup_pinn = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_RebarUpUnc_PINN_Subtracted.Mu2E.p'
+path_DSCartVal_rebardo_pinn = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_RebarDownUnc_PINN_Subtracted.Mu2E.p'
 
-path_Cole_250mm_long_cyl_hg = mu2e_ext_path +\
-    'datafiles/FieldMapsCole/10x_high_granularity_cylin_3846784pts_r250mm_p10cm_10-06_004607'
+path_DS_rebar_noise_pinn    = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_Rebar_noise0p3_PINN_Subtracted.Mu2E.p'
+path_DSCartVal_rebar_noise_pinn = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_Rebar_noise0p3_PINN_Subtracted.Mu2E.p'
 
-path_Cole_1m_cyl = mu2e_ext_path +\
-    'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052'
+cfg_data_DS_Mau13           = cfg_data('Mau13',    'DS', path_DS_Mau13,
+                                       ('Z>4.200', 'Z<13.900', 'R!=0'))
 
-# path_DS_helicalc       = '/home/shared_data/Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.full.p'
-# path_DS_helicalc_coils   = '/home/shared_data/Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only.p'
-path_DS_helicalc_coils   = '/home/shared_data/Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only'
+cfg_data_DS_only            = cfg_data('helicalc', 'DS', path_DS_only,
+                                       ('Z>4.200', 'Z<13.900'))
 
+cfg_data_all_coils          = cfg_data('helicalc', 'DS', path_all_coils,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_Mau13        = cfg_data('Mau13', 'DS', path_DS_Mau13,
-                                    ('Z>4.200', 'Z<13.900', 'R!=0'))
+cfg_data_DS_helicalc_coils  = cfg_data('helicalc', 'DS', path_DS_helicalc_coils,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_Mau13_coilshift   = cfg_data('Mau13', 'DS', path_DS_Mau13_coilshift,
-                                         ('Z>4.200', 'Z<13.900', 'R!=0'))
+cfg_data_DS_helicalc_busbar = cfg_data('helicalc', 'DS', path_DS_helicalc_busbar,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_Mau13_coilshift_bus   = cfg_data('Mau13', 'DS', path_DS_Mau13_coilshift_bus,
-                                             ('Z>4.200', 'Z<13.900', 'R!=0'))
+cfg_data_DS_helicalc_posunc = cfg_data('helicalc', 'DS', path_DS_helicalc_raw,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_Mau13_flat        = cfg_data('Mau13', 'DS', path_DS_Mau13,
-                                    ('Z>8.19', 'Z<13.10', 'R!=0'))
+cfg_data_DS_helicalc_all    = cfg_data('helicalc', 'DS', path_DS_helicalc_all,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_Mau13_graded        = cfg_data('Mau13', 'DS', path_DS_Mau13,
-                                    ('Z>4.19', 'Z<8.19', 'R!=0'))
+cfg_data_DS_helicalc_pinn   = cfg_data('helicalc', 'DS', path_DS_helicalc_pinn,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_Cole_250mm_short_cyl  = cfg_data('Cole', 'DS', path_Cole_250mm_short_cyl,
-                                          ('Z>-1.6', 'Z<1.6', 'R!=0'))
+cfg_data_DSCartVal          = cfg_data('helicalc', 'DS', path_DSCartVal,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_Cole_1m_cyl  = cfg_data('Cole', 'DS', path_Cole_1m_cyl,
-                                 ('Z>-1.6', 'Z<1.6', 'R!=0'))
+cfg_data_DSCartVal_pinn     = cfg_data('helicalc', 'DS', path_DSCartVal_pinn,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_Cole_250mm_long_cyl  = cfg_data('Cole', 'DS', path_Cole_250mm_long_cyl,
-                                         ('Z>-3.5', 'Z<3.5', 'R!=0'))
-cfg_data_Cole_250mm_long_cyl_hg = cfg_data('Cole', 'DS', path_Cole_250mm_long_cyl_hg,
-                                           ('Z>-3.5', 'Z<3.5', 'R!=0'))
+cfg_data_DS_helicalc_rebar    = cfg_data('helicalc', 'DS', path_DS_helicalc_rebar,
+                                       ('Z>4.200', 'Z<13.900'))
 
-# cfg_data_DS_helicalc        = cfg_data('helicalc', 'DS', path_DS_helicalc,
-#                                        ('Z>4.200', 'Z<13.900', 'R!=0'))
+cfg_data_DS_helicalc_rebarup  = cfg_data('helicalc', 'DS', path_DS_helicalc_rebarup,
+                                       ('Z>4.200', 'Z<13.900'))
 
-cfg_data_DS_helicalc_coils        = cfg_data('helicalc', 'DS', path_DS_helicalc_coils,
-                                             ('Z>4.200', 'Z<13.900', 'R!=0'))
+cfg_data_DS_helicalc_rebardo  = cfg_data('helicalc', 'DS', path_DS_helicalc_rebardo,
+                                       ('Z>4.200', 'Z<13.900'))
 
+cfg_data_DS_helicalc_rebar_pinn   = cfg_data('helicalc', 'DS', path_DS_rebar_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DS_helicalc_rebarup_pinn   = cfg_data('helicalc', 'DS', path_DS_rebarup_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DS_helicalc_rebardo_pinn   = cfg_data('helicalc', 'DS', path_DS_rebardo_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DSCartVal_rebar          = cfg_data('helicalc', 'DS', path_DSCartVal_rebar,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DSCartVal_rebar_pinn     = cfg_data('helicalc', 'DS', path_DSCartVal_rebar_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DSCartVal_rebarup_pinn     = cfg_data('helicalc', 'DS', path_DSCartVal_rebarup_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DSCartVal_rebardo_pinn     = cfg_data('helicalc', 'DS', path_DSCartVal_rebardo_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DS_Rebar_noise_pinn   = cfg_data('helicalc', 'DS', path_DS_rebar_noise_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
+
+cfg_data_DSCartVal_Rebar_noise_pinn     = cfg_data('helicalc', 'DS', path_DSCartVal_rebar_noise_pinn,
+                                             ('Z>4.200', 'Z<13.900'))
 
 #################
 # the geom cfgs #
 #################
-# For cartesian DS
-# FIX THESE. THEY ARE OFF. SHOULD BE BASED ON THE FOLLOWING R:
-# 0.047, 0.319, 0.487, 0.655, 0.798
+
 pi8r_800mm = [0.05590169944, 0.16770509831, 0.33541019663, 0.55901699437, 0.78262379213]
 pi4r_800mm = [0.03535533906, 0.1767766953, 0.35355339059, 0.53033008589, 0.81317279836]
 pi2r_800mm = [0.025, 0.175, 0.375, 0.525, 0.800]
 r_steps_800mm = (pi2r_800mm, pi8r_800mm, pi4r_800mm, pi8r_800mm,
                  pi2r_800mm, pi8r_800mm, pi4r_800mm, pi8r_800mm)
 
-# For cylindrical Cole 250 maps
-piall_250mm = [0.0125, 0.0375, 0.0625, 0.0875, 0.1125, 0.150]
-r_steps_250mm_true = (piall_250mm,)*8
-
-piall_250mm_hg = [0.00625, 0.0125, 0.01875, 0.025, 0.03125, 0.0375, 0.04375,
-                  0.05, 0.05625, 0.0625, 0.06875, 0.075, 0.08125, 0.0875,
-                  0.09375, 0.1, 0.10625, 0.1125, 0.11875, 0.125, 0.13125,
-                  0.1375, 0.14375, 0.15]
-r_steps_250mm_true_hg = (piall_250mm_hg,)*64
-
-# For 1m Cole maps
-
-piall_1m = [0.150, 0.300, 0.450, 0.600, 0.750, 0.900]
-r_steps_1m_true = (piall_1m,)*8
-
-piall_1m_hg = [0.0375, 0.075, 0.1125, 0.15, 0.1875, 0.225, 0.2625, 0.3, 0.3375, 0.375, 0.4125,
-               0.45, 0.4875, 0.525, 0.5625, 0.6, 0.6375, 0.675, 0.7125, 0.75, 0.7875, 0.825,
-               0.8625, 0.9]
-r_steps_1m_true_hg = (piall_1m_hg,)*64
-
-# For all maps
 phi_steps_8 = (0, 0.463648, np.pi/4, 1.107149, np.pi/2, 2.034444, 3*np.pi/4, 2.677945)
-phi_steps_4 = (0, np.pi/4, np.pi/2, 3*np.pi/4)
-phi_steps_2 = (0, np.pi/2)
-phi_steps_true = (0, np.pi/8, np.pi/4, 3*np.pi/8, np.pi/2, 5*np.pi/8, 3*np.pi/4, 7*np.pi/8)
-phi_steps_true_hg = [0., 0.0491, 0.0982, 0.1473, 0.1963, 0.2454, 0.2945, 0.3436,
-                     0.3927, 0.4418, 0.4909, 0.54, 0.589, 0.6381, 0.6872, 0.7363,
-                     0.7854, 0.8345, 0.8836, 0.9327, 0.9817, 1.0308, 1.0799, 1.129,
-                     1.1781, 1.2272, 1.2763, 1.3254, 1.3744, 1.4235, 1.4726, 1.5217,
-                     1.5708, 1.6199, 1.669, 1.7181, 1.7671, 1.8162, 1.8653, 1.9144,
-                     1.9635, 2.0126, 2.0617, 2.1108, 2.1598, 2.2089, 2.258, 2.3071,
-                     2.3562, 2.4053, 2.4544, 2.5035, 2.5525, 2.6016, 2.6507, 2.6998,
-                     2.7489, 2.798, 2.8471, 2.8962, 2.9452, 2.9943, 3.0434, 3.0925]
-
+phi_steps_helicalc=(0., 0.39269908, 0.78539816, 1.17809725, 1.57079633, 1.96349541, 2.35619449, 2.74889357)
 
 z_steps_DS_long = [i/1000 for i in range(4221, 13921, 50)]
-z_steps_DS_long_sparsez = [i/1000 for i in range(4221, 13921, 100)]
-z_steps_DS_long_sparserz = [i/1000 for i in range(4221, 13921, 200)]
-z_steps_DS_long_mixz = [i/1000 for i in range(4221, 8521, 100)]+[i/1000 for i in range(8521, 13921, 200)]
-z_steps_DS_flat = [i/1000 for i in range(8221, 12996, 50)]
-z_steps_DS_flat_sparsez = [i/1000 for i in range(8221, 12996, 500)]
-z_steps_DS_graded = [i/1000 for i in range(4221, 8221, 50)]
-z_steps_DS_graded_sparsez = [i/1000 for i in range(4221, 8221, 500)]
-z_steps_cole_small = [i/1000 for i in range(-1500, 1500, 50)]
-z_steps_cole_hg = [i/1000 for i in range(-1500, 1500, 25)]
 
 # Actual configs
 cfg_geom_cyl_800mm_long         = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
                                            x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
+                                           systunc=None, interpolate=False,
                                            do2pi=False, do_selection=True)
 
-cfg_geom_cyl_800mm_long_sparsez = cfg_geom('cyl', z_steps_DS_long_sparsez, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+# Note since do_selection is false, we don't actually use the steps to sparsify the field
+# Phi steps are still relevant since they set the plotting granularity
+cfg_geom_cyl_800mm_long_full       = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                              x_steps=None, y_steps=None,
+                                              systunc=None, interpolate=False,
+                                              do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_long_sparserz= cfg_geom('cyl', z_steps_DS_long_sparserz, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+cfg_geom_cyl_800mm_long_full_LaserUnc = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                              x_steps=None, y_steps=None,
+                                              systunc='LaserUnc', interpolate=False,
+                                              do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_long_mixz    = cfg_geom('cyl', z_steps_DS_long_mixz, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+cfg_geom_cyl_800mm_long_full_MetUnc = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                              x_steps=None, y_steps=None,
+                                              systunc='MetUnc', interpolate=False,
+                                              do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_long_scale_hp= cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[True, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+cfg_geom_cyl_800mm_long_full_CalibMagUnc = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                              x_steps=None, y_steps=None,
+                                              systunc='CalibMagUnc', interpolate=False,
+                                              do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_flat         = cfg_geom('cyl', z_steps_DS_flat, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+cfg_geom_cyl_800mm_long_full_CalibRotUnc = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                              x_steps=None, y_steps=None,
+                                              systunc='CalibRotUnc', interpolate=False,
+                                              do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_flat_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+cfg_geom_cyl_800mm_long_full_TempUnc = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_helicalc,
+                                                x_steps=None, y_steps=None,
+                                                systunc='TempUnc', interpolate=False,
+                                                do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_flat_sparsephi         = cfg_geom('cyl', z_steps_DS_flat, r_steps_800mm, phi_steps_4,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
+###### Cartesian geometry ######
+#Full grid
+xy_steps_cart = [i/1000 for i in range(-950,   950, 25)] 
+z_steps_cart  = [i/1000 for i in range(4225, 13850, 25)]
+cfg_geom_cart = cfg_geom('cart', z_steps=z_steps_cart, r_steps=None, phi_steps=None,
+                         x_steps=xy_steps_cart, y_steps=xy_steps_cart, systunc=None,
+                         interpolate=False, do2pi=False, do_selection=False)
 
-cfg_geom_cyl_800mm_flat_sparsephi_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_4,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-cfg_geom_cyl_800mm_flat_sparserphi_sparsez         = cfg_geom('cyl', z_steps_DS_flat_sparsez, r_steps_800mm, phi_steps_2,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-
-
-
-cfg_geom_cyl_800mm_graded         = cfg_geom('cyl', z_steps_DS_graded, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-cfg_geom_cyl_800mm_graded_sparsez         = cfg_geom('cyl', z_steps_DS_graded_sparsez, r_steps_800mm, phi_steps_8,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-cfg_geom_cyl_800mm_graded_sparsephi         = cfg_geom('cyl', z_steps_DS_graded, r_steps_800mm, phi_steps_4,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-cfg_geom_cyl_800mm_graded_sparsephi_sparsez         = cfg_geom('cyl', z_steps_DS_graded_sparsez, r_steps_800mm, phi_steps_4,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-cfg_geom_cyl_800mm_graded_sparserphi_sparsez         = cfg_geom('cyl', z_steps_DS_graded_sparsez, r_steps_800mm, phi_steps_2,
-                                           x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False], interpolate=False,
-                                           do2pi=False, do_selection=True)
-
-
-
-cfg_geom_Cole_250mm_cyl         = cfg_geom('cyl', z_steps_cole_small, r_steps_250mm_true[0:],
-                                           phi_steps_true[0:], x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True, do_selection=True)
-
-cfg_geom_Cole_250mm_cyl_hg      = cfg_geom('cyl', z_steps_cole_hg, r_steps_250mm_true_hg[0:],
-                                           phi_steps_true_hg[0:], x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True, do_selection=True)
-
-cfg_geom_Cole_1m_cyl            = cfg_geom('cyl', z_steps_cole_small, r_steps_1m_true[0:],
-                                           phi_steps_true[0:], x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True, do_selection=True)
-
-cfg_geom_Cole_1m_cyl_hg         = cfg_geom('cyl', z_steps_cole_hg, r_steps_1m_true_hg[0:],
-                                           phi_steps_true_hg[0:], x_steps=None, y_steps=None,
-                                           bad_calibration=[False, False, False],
-                                           interpolate=False, do2pi=True, do_selection=True)
+#PINN subtracted
+xy_steps_cart_pinn = [i/1000 for i in range(-800,   825, 25)]
+z_steps_cart_pinn  = [i/1000 for i in range(4250, 13575, 25)]
+cfg_geom_cart_pinn = cfg_geom('cart', z_steps=z_steps_cart_pinn, r_steps=None, phi_steps=None,
+                              x_steps=xy_steps_cart_pinn, y_steps=xy_steps_cart_pinn, systunc=None,
+                              interpolate=False, do2pi=False, do_selection=False)
 
 #################
 # the plot cfgs #
 #################
-cfg_plot_none = cfg_plot('none', [-2, 2], 'html', None)
-cfg_plot_mpl = cfg_plot('mpl', [-2, 2], 'html', None)
-cfg_plot_mpl_high_lim = cfg_plot('mpl', [-10, 10], 'html', None)
-cfg_plot_plotly_img = cfg_plot('plotly_html_img', [-2, 2], 'html', None)
-cfg_plot_plotly_html = cfg_plot('plotly_html', [-2, 2], 'html', None)
-cfg_plot_plotly_high_lim = cfg_plot('plotly', [-10, 10], 'html', None)
 
-##############################
-# the params and pickle cfgs #
-##############################
-cfg_params_DS_Mau13                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=10, ms_c1=50, ns_c1=4,
-                                                 length1=9.7, ms_c1=50, ns_c1=8,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000},
-                                                 bs_tuples=((1., 0, 7.873),
-                                                            (1., 0, 13.389)),
-                                                 bs_bounds=(0.1, 0.1, 5),
-                                                 loss='linear',
-                                                 version=1000)
-                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 # bs_bounds=None, version=1000)
+df_fine_path         = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars.Mu2E.p'
+df_fine_path_rebar   = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars_Rebar.Mu2E.p'
+df_fine_path_rebarup = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars_RebarUpUnc.Mu2E.p'
+df_fine_path_rebardo = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars_RebarDownUnc.Mu2E.p'
+df_fine_path_pinn    = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars_PINN_Subtracted.Mu2E.p'
+df_fine_path_noise_pinn = mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars_Rebar_noise0p3_PINN_Subtracted.Mu2E.p'
 
-cfg_params_DS_Mau13_k2              = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=10, ms_c1=50, ns_c1=4,
-                                                 length1=9.7, ms_c1=50, ns_c1=8,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000,
-                                                          'k2': -3,},
-                                                 bs_tuples=((1., 0, 7.873),
-                                                            (1., 0, 13.389)),
-                                                 bs_bounds=(0.1, 0.1, 5),
-                                                 loss='linear',
-                                                 version=1000)
-                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 # bs_bounds=None, version=1000)
+cfg_plot_mpl          = cfg_plot('mpl',        [-2, 2], 'html', None, None)
+cfg_plot_mpl_nonuni   = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, None)
+cfg_plot_mpl_fine     = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path)
+cfg_plot_mpl_pinn     = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path_pinn)
+cfg_plot_mpl_rebar    = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path_rebar)
+cfg_plot_mpl_rebarup  = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path_rebarup)
+cfg_plot_mpl_rebardo  = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path_rebardo)
+cfg_plot_mpl_noise_pinn = cfg_plot('mpl_nonuni', [-2, 2], 'html', None, df_fine_path_noise_pinn)
 
-cfg_params_DS_Mau13_only_ks         = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 #length1=9.7, ms_c1=60, ns_c1=8,
-                                                 length1=9.7, ms_c1=50, ns_c1=8,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k1': 0,
-                                                          'k2': -3,
-                                                          'k3': 10000,
-                                                          'k4': 0,
-                                                          'k5': 0,
-                                                          'k6': 0,
-                                                          'k7': 0,},
-                                                 bs_tuples=None,
-                                                 bs_bounds=None,
-                                                 loss='linear',
-                                                 version=1000)
+cfg_plot_none         = cfg_plot('none', None, None, None, None)
 
-cfg_params_DS_Mau13_no_BS           = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=10, ms_c1=50, ns_c1=4,
-                                                 length1=9.7, ms_c1=50, ns_c1=8,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000},
-                                                 bs_tuples=None,
-                                                 bs_bounds=None,
-                                                 loss='linear',
-                                                 version=1000)
-                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 # bs_bounds=None, version=1000)
+###################
+# the params cfgs #
+###################
 
-cfg_params_DS_Mau13_cyl_hel_no_BS   = cfg_params(pitch1=1., ms_h1=2, ns_h1=3,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=10, ms_c1=50, ns_c1=4,
-                                                 length1=9.7, ms_c1=50, ns_c1=8,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000},
-                                                 bs_tuples=None,
-                                                 bs_bounds=None,
-                                                 loss='linear',
-                                                 version=1000)
-                                                 # ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 # bs_bounds=None, version=1000)
+cfg_params_DS_Mau13_only_ks = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+                                         pitch2=0, ms_h2=0, ns_h2=0,
+                                         length1=11.9, ms_c1=1, ns_c1=1,
+                                         length2=0, ms_c2=0, ns_c2=0,
+                                         ks_dict={'k1': 0,
+                                                  'k2': -3,
+                                                  'k3': 10000,
+                                                  'k4': 0,
+                                                  'k5': 0,
+                                                  'k6': 0,
+                                                  'k7': 0,},
+                                         bs_tuples=None,
+                                         bs_bounds=None,
+                                         loss='linear',
+                                         method='leastsq',
+                                         version=1000)
+#                                         cfg_calc_data=cfg_data_DS_helicalc_busbar)
 
-cfg_params_DS_Mau13_cyl_hel_bs      = cfg_params(pitch1=1., ms_h1=2, ns_h1=3,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=0, ms_c1=0, ns_c1=0,
-                                                 length1=10, ms_c1=50, ns_c1=4,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000},
-                                                 bs_tuples=((1., 0, 7.873),
-                                                            (1., 0, 13.389)),
-                                                 bs_bounds=(0.1, 0.1, 5),
-                                                 loss='linear',
-                                                 version=1000)
+cfg_params_DS_Mau13_new     = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
+                                         pitch2=0, ms_h2=0, ns_h2=0,
+                                         length1=11.3, ms_c1=70, ns_c1=6,
+                                         length2=0, ms_c2=0, ns_c2=0,
+                                         ks_dict={'k1': 0,
+                                                  'k2': -3,
+                                                  'k3': 10000,
+                                                  'k4': 0,
+                                                  'k5': 0,
+                                                  'k6': 0,
+                                                  'k7': 0,},
+                                         bs_tuples=None,
+                                         bs_bounds=None,
+                                         loss='linear',
+                                         method='leastsq',
+                                         version=1005,
+                                         noise=0.3)
+#                                         cfg_calc_data=cfg_data_DS_helicalc_busbar)
 
-cfg_params_DS_Mau13_test            = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 # length1=10, ms_c1=50, ns_c1=4,
-                                                 length1=10, ms_c1=10, ns_c1=1,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 bs_bounds=None, loss='linear', version=1000)
+###################
+# the pickle cfgs #
+###################
 
-cfg_params_DS_Mau13_5m                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=5, ms_c1=50, ns_c1=4,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000}, bs_tuples=None,
-                                                 bs_bounds=None, loss='linear', version=1000)
+cfg_pickle_DS_only       = cfg_pickle(use_pickle=False, save_pickle=True,
+                                      load_name='DS_only_V7',
+                                      save_name='DS_only_V7', recreate=False)
 
-cfg_pickle_Mau13_flat                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_bs_endsonly_flat_10_50_4',
-                                                 save_name='Mau13_bs_endsonly_flat_10_50_4', recreate=False)
+cfg_pickle_DS_only_new   = cfg_pickle(use_pickle=False, save_pickle=True,
+                                      load_name='DS_only_V8',
+                                      save_name='DS_only_V8', recreate=False)
 
-cfg_pickle_Mau13_flat_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_flat_sparsez_10_50_4',
-                                                 save_name='Mau13_flat_sparsez_10_50_4', recreate=False)
+cfg_pickle_all_coils     = cfg_pickle(use_pickle=False, save_pickle=True,
+                                      load_name='all_coils_V1',
+                                      save_name='all_coils_V1', recreate=False)
 
-cfg_pickle_Mau13_flat_sparsephi                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_flat_sparsephi_10_50_4',
-                                                 save_name='Mau13_flat_sparsephi_10_50_4', recreate=False)
+cfg_pickle_all_coils_new = cfg_pickle(use_pickle=False, save_pickle=True,
+                                      load_name='all_coils_V3',
+                                      save_name='all_coils_V3', recreate=False)
 
-cfg_pickle_Mau13_flat_sparsephi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_flat_sparsephi_sparsez_10_50_4',
-                                                 save_name='Mau13_flat_sparsephi_sparsez_10_50_4', recreate=False)
+cfg_pickle_Mau13_only_ks     = cfg_pickle(use_pickle=False, save_pickle=True,
+                                          load_name='Mau13_only_ks',
+                                          save_name='Mau13_only_ks', recreate=False)
 
-cfg_pickle_Mau13_flat_sparsephi_sparsez_5m                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_flat_sparsephi_sparsez_05_50_4',
-                                                 save_name='Mau13_flat_sparsephi_sparsez_05_50_4', recreate=False)
+cfg_pickle_Mau13_only_ks_rec = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='Mau13_only_ks',
+                                          save_name='Mau13_only_ks', recreate=True)
 
-cfg_pickle_Mau13_flat_sparserphi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_flat_sparserphi_sparsez_10_50_4',
-                                                 save_name='Mau13_flat_sparserphi_sparsez_10_50_4', recreate=False)
+# NOTE: for helicalc fits, we expect 'save_name' to correspond to the 'actual fit'
+# e.g. helicalc_LaserUnc means either we did the LaserUnc fit, or loaded the LaserUnc
+# params to fit the nominal field
 
+cfg_pickle_helicalc_all      = cfg_pickle(use_pickle=False, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_all', recreate=False)
+        
+cfg_pickle_helicalc_all_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_all', recreate=True)
+        
+cfg_pickle_helicalc_all_LaserUnc      = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_LaserUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_LaserUnc_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_LaserUnc',
+                                          save_name='helicalc_LaserUnc', recreate=True)
+        
+cfg_pickle_helicalc_all_MetUnc      = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_MetUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_MetUnc_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_MetUnc',
+                                          save_name='helicalc_MetUnc', recreate=True)
+        
+cfg_pickle_helicalc_all_CalibMagUnc      = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_CalibMagUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_CalibMagUnc_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_CalibMagUnc',
+                                          save_name='helicalc_CalibMagUnc', recreate=True)
+        
+cfg_pickle_helicalc_all_CalibRotUnc      = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_CalibRotUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_CalibRotUnc_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_CalibRotUnc',
+                                          save_name='helicalc_CalibRotUnc', recreate=True)
+        
+cfg_pickle_helicalc_all_TempUnc          = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_TempUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_TempUnc_rec      = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_TempUnc',
+                                          save_name='helicalc_TempUnc', recreate=True)
 
-cfg_pickle_Mau13_graded                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_10_50_4',
-                                                 save_name='Mau13_graded_10_50_4', recreate=False)
-                                                 # load_name='Mau13_bs_endsonly_graded_10_50_4',
-                                                 # save_name='Mau13_bs_endsonly_graded_10_50_4', recreate=False)
+cfg_pickle_helicalc_all_Rebar            = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_Rebar', recreate=False)
+        
+cfg_pickle_helicalc_all_Rebar_rec        = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_Rebar',
+                                          save_name='helicalc_Rebar', recreate=True)
+        
+cfg_pickle_helicalc_all_Rebar_noise      = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_all',
+                                          save_name='helicalc_Rebar_noise', recreate=False)
+        
+cfg_pickle_helicalc_all_Rebar_noise_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_Rebar_noise',
+                                          save_name='helicalc_Rebar_noise', recreate=True)
+        
+cfg_pickle_helicalc_all_RebarUpUnc        = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_Rebar',
+                                          save_name='helicalc_RebarUpUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_RebarUpUnc_rec    = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_RebarUpUnc',
+                                          save_name='helicalc_RebarUpUnc', recreate=True)
 
-cfg_pickle_Mau13_graded_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_sparsez_10_50_4',
-                                                 save_name='Mau13_graded_sparsez_10_50_4', recreate=False)
+cfg_pickle_helicalc_all_RebarDoUnc        = cfg_pickle(use_pickle=True, save_pickle=True,
+                                          load_name='helicalc_Rebar',
+                                          save_name='helicalc_RebarDoUnc', recreate=False)
+        
+cfg_pickle_helicalc_all_RebarDoUnc_rec    = cfg_pickle(use_pickle=True, save_pickle=False,
+                                          load_name='helicalc_RebarDoUnc',
+                                          save_name='helicalc_RebarDoUnc', recreate=True)
 
-cfg_pickle_Mau13_graded_sparsephi                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_sparsephi_10_50_4',
-                                                 save_name='Mau13_graded_sparsephi_10_50_4', recreate=False)
+cfg_pickle_helicalc_pinn  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                       load_name='helicalc_pinn',
+                                       save_name='helicalc_pinn', recreate=False)
 
-cfg_pickle_Mau13_graded_sparsephi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_sparsephi_sparsez_10_50_4',
-                                                 save_name='Mau13_graded_sparsephi_sparsez_10_50_4', recreate=False)
+cfg_pickle_helicalc_pinn_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                           load_name='helicalc_pinn',
+                                           save_name='helicalc_pinn', recreate=True)
 
-cfg_pickle_Mau13_graded_sparsephi_sparsez_5m                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_sparsephi_sparsez_05_50_4',
-                                                 save_name='Mau13_graded_sparsephi_sparsez_05_50_4', recreate=False)
+cfg_pickle_helicalc_Rebar_pinn  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                             load_name='helicalc_Rebar',
+                                             save_name='helicalc_Rebar_pinn', recreate=False)
 
-cfg_pickle_Mau13_graded_sparserphi_sparsez                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_graded_sparserphi_sparsez_10_50_4',
-                                                 save_name='Mau13_graded_sparserphi_sparsez_10_50_4', recreate=False)
+cfg_pickle_helicalc_Rebar_pinn_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                 load_name='helicalc_Rebar_pinn',
+                                                 save_name='helicalc_Rebar_pinn', recreate=True)
 
+cfg_pickle_helicalc_RebarUpUnc_pinn  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                                  load_name='helicalc_RebarUpUnc',
+                                                  save_name='helicalc_RebarUpUnc_pinn', recreate=False)
 
+cfg_pickle_helicalc_RebarUpUnc_pinn_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                      load_name='helicalc_RebarUpUnc_pinn',
+                                                      save_name='helicalc_RebarUpUnc_pinn', recreate=True)
 
-cfg_pickle_Mau13_trajtest                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13traj',
-                                                 save_name='Mau13traj', recreate=False)
+cfg_pickle_helicalc_RebarDownUnc_pinn  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                                    load_name='helicalc_RebarDoUnc',
+                                                    save_name='helicalc_RebarDownUnc_pinn', recreate=False)
 
-cfg_pickle_Mau13_test                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_test',
-                                                 save_name='Mau13_test', recreate=False)
+cfg_pickle_helicalc_RebarDownUnc_pinn_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                        load_name='helicalc_RebarDownUnc_pinn',
+                                                        save_name='helicalc_RebarDownUnc_pinn', recreate=True)
 
-# cfg_params_DS_Mau13                 = cfg_params(pitch1=13, ms_h1=50, ns_h1=4,
-#                                                  pitch2=0, ms_h2=0, ns_h2=0,
-#                                                  length1=0, ms_c1=0, ns_c1=0,
-#                                                  length2=0, ms_c2=0, ns_c2=0,
-#                                                  ks_dict={'k3': 10000}, bs_tuples=None,
-#                                                  bs_bounds=None, loss='linear', version=1000)
+cfg_pickle_helicalc_Rebar_noise_pinn  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                                   load_name='helicalc_Rebar_noise',
+                                                   save_name='helicalc_Rebar_noise_pinn', recreate=False)
 
-cfg_pickle_Mau13                    = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13',
-                                                 save_name='Mau13', recreate=False)
-cfg_pickle_Mau13_k2                 = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_k2',
-                                                 save_name='Mau13_k2', recreate=False)
+cfg_pickle_helicalc_Rebar_noise_pinn_rec  = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                       load_name='helicalc_Rebar_noise_pinn',
+                                                       save_name='helicalc_Rebar_noise_pinn', recreate=True)
 
-cfg_pickle_Mau13_only_ks            = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_only_ks',
-                                                 save_name='Mau13_only_ks', recreate=False)
+#############
+# main code #
+#############
 
-cfg_pickle_Mau13_no_BS              = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_no_BS',
-                                                 save_name='Mau13_no_BS', recreate=False)
-
-cfg_pickle_Mau13_cyl_hel_no_BS      = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_cyl_hel_no_BS',
-                                                 save_name='Mau13_cyl_hel_no_BS', recreate=False)
-
-cfg_pickle_Mau13_rec                = cfg_pickle(use_pickle=True, save_pickle=False,
-                                                 load_name='Mau13',
-                                                 save_name='Mau13', recreate=True)
-
-cfg_pickle_Mau13_k2_rec             = cfg_pickle(use_pickle=True, save_pickle=False,
-                                                 load_name='Mau13_k2',
-                                                 save_name='Mau13_k2', recreate=True)
-
-cfg_pickle_Mau13_sparsez            = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_sparsez',
-                                                 save_name='Mau13_sparsez', recreate=False)
-
-cfg_pickle_Mau13_sparserz           = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_sparserz',
-                                                 save_name='Mau13_sparserz', recreate=False)
-
-cfg_pickle_Mau13_mixz               = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_mixz',
-                                                 save_name='Mau13_mixz', recreate=False)
-
-cfg_pickle_Mau13_coilshift          = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_coilshift',
-                                                 save_name='Mau13_coilshift', recreate=False)
-
-cfg_pickle_Mau13_coilshift_bus      = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_coilshift_bus',
-                                                 save_name='Mau13_coilshift_bus', recreate=False)
-
-# no interlayer connect
-cfg_pickle_helicalc_cyl_v1          = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='helicalc_cyl_v1',
-                                                 save_name='helicalc_cyl_v1', recreate=False)
-# with interlayer connect
-cfg_pickle_helicalc_cyl_v2          = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='helicalc_cyl_v2',
-                                                 save_name='helicalc_cyl_v2', recreate=False)
-
-# trying coils only again, with k2 term
-cfg_pickle_helicalc_coils_only_cyl  = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='helicalc_coils_only_cyl',
-                                                 save_name='helicalc_coils_only_cyl', recreate=False)
-
-# load base fit to seed Huber fit
-cfg_pickle_Mau13_Huber              = cfg_pickle(use_pickle=True, save_pickle=True,
-                                                 load_name='Mau13',
-                                                 save_name='Mau13_huber', recreate=False)
-
-cfg_pickle_Mau13_scale_hp           = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_scale_hp_bias_up',
-                                                 save_name='Mau13_scale_hp_bias_up', recreate=False)
-
-cfg_pickle_Mau13_scale_hp_rec       = cfg_pickle(use_pickle=True, save_pickle=False,
-                                                 load_name='Mau13_scale_hp_bias_up',
-                                                 save_name='Mau13_scale_hp_bias_up', recreate=True)
-
-cfg_pickle_Mau13_cyl_hel_bs         = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Mau13_cyl_hel_bs',
-                                                 save_name='Mau13_cyl_hel_bs', recreate=False)
-
-cfg_params_Cole_Hel                 = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=0, ms_c1=0, ns_c1=0,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 768},
-                                                 bs_tuples=((0.25, 0, -46),
-                                                            (0.25, 0, 46)),
-                                                 bs_bounds=(0.1, 0.1, 5),
-                                                 loss='linear',
-                                                 version=1000)
-cfg_pickle_Cole_Hel                 = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Cole_Hel',
-                                                 save_name='Cole_Hel', recreate=False)
-
-cfg_params_Cole_Hel_Short           = cfg_params(pitch1=0.1, ms_h1=2, ns_h1=3,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=9.2*1.5, ms_c1=3, ns_c1=2,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 768},
-                                                 bs_tuples=((0.25, 0, -4.6),
-                                                            (0.25, 0, 4.6)),
-                                                 bs_bounds=(0.1, 0.1, 5),
-                                                 loss='linear',
-                                                 version=1000)
-cfg_pickle_Cole_Hel_Short           = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Cole_Hel_Short',
-                                                 save_name='Cole_Hel_Short', recreate=False)
-
-cfg_params_Cole_Cyl                 = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=0.05, ms_c1=1, ns_c1=25,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 768},
-                                                 bs_tuples=((0.25, 0, -46),
-                                                            (0.25, 0, 46)),
-                                                 bs_bounds=(0.1, 0.1, 3),
-                                                 loss='linear',
-                                                 version=1000)
-cfg_pickle_Cole_Cyl                 = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Cole_Cyl',
-                                                 save_name='Cole_Cyl', recreate=False)
-
-cfg_params_Cole_1m_Cyl              = cfg_params(pitch1=0, ms_h1=0, ns_h1=0,
-                                                 # pitch2=18.4, ms_h2=4, ns_h2=3,
-                                                 pitch2=0, ms_h2=0, ns_h2=0,
-                                                 length1=9.2, ms_c1=4, ns_c1=4,
-                                                 # length1=0, ms_c1=0, ns_c1=0,
-                                                 length2=0, ms_c2=0, ns_c2=0,
-                                                 ks_dict={'k3': 10000},
-                                                 # ks_dict=None,
-                                                 bs_tuples=((1., 0, -4.6),
-                                                            (1., 0, 4.6)),
-                                                 bs_bounds=(0.1, 0.1, 10),
-                                                 loss='linear',
-                                                 version=1000)
-cfg_pickle_Cole_1m_Cyl              = cfg_pickle(use_pickle=False, save_pickle=True,
-                                                 load_name='Cole_1m_Cyl',
-                                                 save_name='Cole_1m_Cyl', recreate=False)
 if __name__ == "__main__":
     if len(argv) != 1:
-        # hmd, ff = field_map_analysis('fma_cole_hel', cfg_data_Cole_250mm_long_cyl,
-        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel,
-        #                              cfg_pickle_Cole_Hel, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_cole_short_hel', cfg_data_Cole_250mm_short_cyl,
-        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Hel_Short,
-        #                              cfg_pickle_Cole_Hel_Short, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_cole_cyl', cfg_data_Cole_250mm_long_cyl,
-        #                              cfg_geom_Cole_250mm_cyl, cfg_params_Cole_Cyl,
-        #                              cfg_pickle_Cole_Cyl, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_cole_1m_hel', cfg_data_Cole_1m_cyl,
-        #                              cfg_geom_Cole_1m_cyl, cfg_params_Cole_1m_Cyl,
-        #                              cfg_pickle_Cole_1m_Cyl, cfg_plot_mpl)
-
-        # GOOD FITTER
-        #########
-        # cyl only
-        # hmd, ff = field_map_analysis('fma_mau13', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13, cfg_plot_mpl)
-        #                              # cfg_pickle_Mau13_rec, cfg_plot_mpl)
-        # cyl only, with k2 term (constant By)
-        # hmd, ff = field_map_analysis('fma_mau13_k2', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_k2,
-        #                              cfg_pickle_Mau13_k2, cfg_plot_mpl)
-                                     # cfg_pickle_Mau13_k2_rec, cfg_plot_mpl)
-        # cyl only, no BS terms
-        # hmd, ff = field_map_analysis('fma_mau13_no_BS', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_no_BS,
-        #                              cfg_pickle_Mau13_no_BS, cfg_plot_mpl)
-        # cyl, hel, no BS terms
-        # hmd, ff = field_map_analysis('fma_mau13_cyl_hel_no_BS', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_cyl_hel_no_BS,
-        #                              cfg_pickle_Mau13_cyl_hel_no_BS, cfg_plot_mpl)
-        # helicalc, PS+TS, DS helical coils, no busbars, no interlayer connect
-        # hmd, ff = field_map_analysis('fma_helicalc_cyl_v1', cfg_data_DS_helicalc,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_helicalc_cyl_v1, cfg_plot_mpl)
-        # helicalc, PS+TS, DS helical coils, no busbars, with interlayer connect
-        # hmd, ff = field_map_analysis('fma_helicalc_cyl_v2', cfg_data_DS_helicalc,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_helicalc_cyl_v2, cfg_plot_mpl)
-        # trying again, now that I'm sure it's just coils.
-        # hmd, ff = field_map_analysis('fma_helicalc_coils_only_cyl', cfg_data_DS_helicalc_coils,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_k2,
-        #                              cfg_pickle_helicalc_coils_only_cyl, cfg_plot_mpl)
-        # trivial cartesian solutions, plus cylidnrical harmonics, no BS
-        # note, adjusted cartesian terms in fit function (only 7 parameters)
+        
+        '''
+        # Fitting regular grid
         hmd, ff = field_map_analysis('fma_mau13_only_ks', cfg_data_DS_Mau13,
-                                     cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_only_ks,
-                                     cfg_pickle_Mau13_only_ks, cfg_plot_mpl)
-        #                              # cfg_pickle_Mau13_only_ks_rec, cfg_plot_mpl)
+                                      cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_only_ks,
+                                      cfg_pickle_Mau13_only_ks, cfg_plot_mpl)
 
-        #########
-        ####### recreate plots
-        # name = 'Mau13_mixz' # 'Mau13_sparsez'
-        # cfg_p_rec_ = cfg_pickle(use_pickle=True, save_pickle=False,
-        #                         load_name=name, save_name=name,
-        #                         recreate=True)
-        ########
-        # sparse z steps (10cm instead of 5cm)
-        # hmd, ff = field_map_analysis('fma_mau13_sparsez', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_sparsez, cfg_plot_mpl)
-        #                              # cfg_p_rec_, cfg_plot_mpl)
-        # sparser z steps (20cm instead of 5cm)
-        # LINEAR LOSS
-        # hmd, ff = field_map_analysis('fma_mau13_sparserz', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long_sparserz, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_sparserz, cfg_plot_mpl)
-        #                              # cfg_p_rec_, cfg_plot_mpl)
-        # HUBER LOSS
-        # name = 'Mau13_sparserz'
-        # name0 = 'Mau13'
-        # cfg_pickle_ = cfg_pickle(use_pickle=True, save_pickle=True,
-        #                          # load_name=name,
-        #                          load_name=name0,
-        #                          save_name=name+'_huber', recreate=False)
-        # hmd, ff = field_map_analysis('fma_mau13_sparserz_huber', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long_sparserz, cfg_params_DS_Mau13,
-        #                              cfg_pickle_, cfg_plot_mpl)
-        #                              # cfg_p_rec_, cfg_plot_mpl)
-        # sparse mix z steps (20cm tracker, 10cm gradient)
-        # hmd, ff = field_map_analysis('fma_mau13_mixz', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long_mixz, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_mixz, cfg_plot_mpl)
-        #                              # cfg_p_rec_, cfg_plot_mpl)
+        # Plotting regular grid
+        hmd, ff = field_map_analysis('fma_mau13_only_ks', cfg_data_DS_Mau13,
+                                      cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_only_ks,
+                                      cfg_pickle_Mau13_only_ks_rec, cfg_plot_mpl)
 
-        # shifted coils no bus (Hank Glass 09-10-2020)
-        # hmd, ff = field_map_analysis('fma_mau13_coilshift', cfg_data_DS_Mau13_coilshift,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_coilshift, cfg_plot_mpl)
+        # Fitting helicalc nominal
+        hmd, ff = field_map_analysis('fma_helicalc_all', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all, cfg_plot_mpl_fine)
 
-        # shifted coils + bus
-        # hmd, ff = field_map_analysis('fma_mau13_coilshift_bus', cfg_data_DS_Mau13_coilshift_bus,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_coilshift_bus, cfg_plot_mpl)
+        # Plotting helicalc nominal
+        hmd, ff = field_map_analysis('fma_helicalc_all', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_rec, cfg_plot_mpl_fine)
 
-        # Huber bias (no Hall probe errors)
-        # (TAKES WAY TOO LONG TO CONVERGE IN CURRENT SETUP) -- seed fit
-        # MUST CHANGE mu2e/fieldfitter_redux2.py to include "loss" in fcn keywords...
-        # FIXME! change this to be a parameter in a config named tuple
-        # hmd, ff = field_map_analysis('fma_mau13_huber', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_Huber, cfg_plot_mpl)
+        # Fitting helicalc LaserUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_LaserUnc', cfg_data_DS_helicalc_posunc,
+                                     cfg_geom_cyl_800mm_long_full_LaserUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_LaserUnc, cfg_plot_mpl_nonuni)
 
-        # Huber for single badly biased Hall probe
+        # Plotting helicalc LaserUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_LaserUnc', cfg_data_DS_helicalc_posunc,
+                                     cfg_geom_cyl_800mm_long_full_LaserUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_LaserUnc_rec, cfg_plot_mpl_nonuni)
+
+        # Plotting helicalc nominal vs LaserUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_LaserUnc_nom', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_LaserUnc_rec, cfg_plot_mpl_fine)
+
+        # Fitting helicalc MetUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_MetUnc', cfg_data_DS_helicalc_posunc,
+                                     cfg_geom_cyl_800mm_long_full_MetUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_MetUnc, cfg_plot_mpl_nonuni)
+
+        # Fitting helicalc MetUnc
+        for itoy in range(10):
+            cfg_pickle_toy = cfg_pickle_helicalc_all_MetUnc._replace(save_name = f'helicalc_MetUnc{itoy}')            
+            cfg_geom_MetUnc_toy = cfg_geom_cyl_800mm_long_full_MetUnc._replace(systunc = f'MetUnc{itoy}')
+            hmd, ff = field_map_analysis(f'fma_helicalc_all_MetUnc{itoy}', cfg_data_DS_helicalc_posunc,
+                                         cfg_geom_MetUnc_toy, cfg_params_DS_Mau13_new,
+                                         cfg_pickle_toy, cfg_plot_none)
+
+        # Plotting helicalc MetUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_MetUnc', cfg_data_DS_helicalc_posunc,
+                                     cfg_geom_cyl_800mm_long_full_MetUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_MetUnc_rec, cfg_plot_mpl_nonuni)
+
+        # Plotting helicalc nominal vs MetUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_MetUnc_nom', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_MetUnc_rec, cfg_plot_mpl_fine)
+
+        # Fitting helicalc CalibMagUnc
+        for itoy in range(10):
+            cfg_pickle_toy = cfg_pickle_helicalc_all_CalibMagUnc._replace(save_name = f'helicalc_CalibMagUnc{itoy}')            
+            cfg_geom_CalibMagUnc_toy = cfg_geom_cyl_800mm_long_full_CalibMagUnc._replace(systunc = f'CalibMagUnc{itoy}')
+            hmd, ff = field_map_analysis(f'fma_helicalc_all_CalibMagUnc{itoy}', cfg_data_DS_helicalc_all,
+                                         cfg_geom_CalibMagUnc_toy, cfg_params_DS_Mau13_new,
+                                         cfg_pickle_toy, cfg_plot_none)
+
+        # Plotting helicalc CalibMagUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_CalibMagUnc', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full_CalibMagUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibMagUnc_rec, cfg_plot_mpl_nonuni)
+
+        # Plotting helicalc nominal vs CalibMagUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_CalibMagUnc_nom', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibMagUnc_rec, cfg_plot_mpl_fine)
+
+        # Fitting helicalc CalibRotUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_CalibRotUnc', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full_CalibRotUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibRotUnc, cfg_plot_mpl_nonuni)
+
+        # Fitting helicalc CalibRotUnc
+        for itoy in range(10):
+            cfg_pickle_toy = cfg_pickle_helicalc_all_CalibRotUnc._replace(save_name = f'helicalc_CalibRotUnc{itoy}')            
+            cfg_geom_CalibRotUnc_toy = cfg_geom_cyl_800mm_long_full_CalibRotUnc._replace(systunc = f'CalibRotUnc{itoy}')            
+            hmd, ff = field_map_analysis(f'fma_helicalc_all_CalibRotUnc{itoy}', cfg_data_DS_helicalc_all,
+                                         cfg_geom_CalibRotUnc_toy, cfg_params_DS_Mau13_new,
+                                         cfg_pickle_toy, cfg_plot_none)
+
+        # Plotting helicalc CalibRotUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_CalibRotUnc', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full_CalibRotUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibRotUnc_rec, cfg_plot_mpl_nonuni)
+
+        # Plotting helicalc nominal vs CalibRotUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_CalibRotUnc_nom', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibRotUnc_rec, cfg_plot_mpl_fine)
+
+        # Fitting helicalc TempUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_TempUnc', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full_TempUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_TempUnc, cfg_plot_mpl_nonuni)
+
+        # Fitting helicalc TempUnc toys
+        for itoy in range(10):
+            cfg_pickle_toy = cfg_pickle_helicalc_all_TempUnc._replace(save_name = f'helicalc_TempUnc{itoy}')            
+            cfg_geom_TempUnc_toy = cfg_geom_cyl_800mm_long_full_TempUnc._replace(systunc = f'TempUnc{itoy}')            
+            hmd, ff = field_map_analysis(f'fma_helicalc_all_TempUnc{itoy}', cfg_data_DS_helicalc_all,
+                                         cfg_geom_TempUnc_toy, cfg_params_DS_Mau13_new,
+                                         cfg_pickle_toy, cfg_plot_none)
+
+        # Plotting helicalc TempUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_TempUnc', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full_TempUnc, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_TempUnc_rec, cfg_plot_mpl_nonuni)
+
+        # Plotting helicalc nominal vs TempUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_TempUnc_nom', cfg_data_DS_helicalc_all,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_TempUnc_rec, cfg_plot_mpl_fine)
+
+        # Fitting helicalc rebar nominal
+        hmd, ff = field_map_analysis('fma_helicalc_all_Rebar', cfg_data_DS_helicalc_rebar,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_Rebar, cfg_plot_mpl_rebar)
+
+        # Fitting helicalc rebar nominal w/ noise
+        hmd, ff = field_map_analysis('fma_helicalc_all_Rebar_noise_fitmap', cfg_data_DS_helicalc_rebar,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_Rebar_noise_rec, cfg_plot_mpl_nonuni)
+
+        # Fitting helicalc RebarUpUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_RebarUpUnc', cfg_data_DS_helicalc_rebarup,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarUpUnc, cfg_plot_mpl_rebarup)
+
+        # Plotting helicalc Rebar vs RebarUpUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_RebarUpUnc_nom', cfg_data_DS_helicalc_rebar,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarUpUnc_rec, cfg_plot_mpl_rebar)
+
+        # Fitting helicalc RebarDoUnc
+        hmd, ff = field_map_analysis('fma_helicalc_all_RebarDoUnc', cfg_data_DS_helicalc_rebardo,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarDoUnc, cfg_plot_mpl_rebardo)
+
+        # Plotting helicalc nominal vs RebarDoUnc fit
+        hmd, ff = field_map_analysis('fma_helicalc_all_RebarDoUnc_nom', cfg_data_DS_helicalc_rebar,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarDoUnc_rec, cfg_plot_mpl_rebar)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_rec, cfg_plot_mpl)
+
+        # Fitting PINN-corrected map on fit grid
+        hmd, ff = field_map_analysis('fma_helicalc_pinn', cfg_data_DS_helicalc_pinn,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_pinn, cfg_plot_mpl_pinn)
+
+        # Evaluating PINN-corrected map on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_pinn', cfg_data_DSCartVal_pinn,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_pinn_rec, cfg_plot_mpl)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_LaserUnc', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_LaserUnc_rec, cfg_plot_mpl)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_MetUnc', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_MetUnc_rec, cfg_plot_mpl)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_CalibMagUnc', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibMagUnc_rec, cfg_plot_mpl)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_CalibRotUnc', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_CalibRotUnc_rec, cfg_plot_mpl)
+
+        # Evaluating nominal field on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_TempUnc', cfg_data_DSCartVal,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_TempUnc_rec, cfg_plot_mpl)
+
+        # Evaluating rebar fit on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_Rebar_noise', cfg_data_DSCartVal_Rebar,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_Rebar_noise_rec, cfg_plot_none)
+
+        # Evaluating rebarup fit on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_RebarUpUnc', cfg_data_DSCartVal_Rebar,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarUpUnc_rec, cfg_plot_mpl)
+
+        # Evaluating rebardown fit on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_RebarDownUnc', cfg_data_DSCartVal_Rebar,
+                                     cfg_geom_cart, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_all_RebarDoUnc_rec, cfg_plot_mpl)
+
+        # Fitting PINN-corrected rebar map on fit grid
+        hmd, ff = field_map_analysis('fma_helicalc_Rebar_pinn', cfg_data_DS_helicalc_Rebar_pinn,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_Rebar_pinn, cfg_plot_mpl_nonuni)
+
+        # Fitting PINN-corrected rebarup map on fit grid
+        hmd, ff = field_map_analysis('fma_helicalc_RebarUpUnc_pinn', cfg_data_DS_helicalc_rebarup_pinn,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_RebarUpUnc_pinn, cfg_plot_mpl_nonuni)
+
+        # Fitting PINN-corrected rebardo map on fit grid
+        hmd, ff = field_map_analysis('fma_helicalc_RebarDownUnc_pinn', cfg_data_DS_helicalc_rebardo_pinn,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_RebarDownUnc_pinn, cfg_plot_mpl_nonuni)
+
+        # Evaluating PINN-corrected rebar map on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_Rebar_pinn', cfg_data_DSCartVal_Rebar_pinn,
+                                     cfg_geom_cart_pinn, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_Rebar_pinn_rec, cfg_plot_none)
+
+        # Evaluating PINN-corrected rebarup map on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_RebarUpUnc_pinn', cfg_data_DSCartVal_rebarup_pinn,
+                                     cfg_geom_cart_pinn, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_RebarUpUnc_pinn_rec, cfg_plot_none)
+
+        # Evaluating PINN-corrected rebardo map on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_RebarDownUnc_pinn', cfg_data_DSCartVal_rebardo_pinn,
+                                     cfg_geom_cart_pinn, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_RebarDownUnc_pinn_rec, cfg_plot_none)
+
+        # Fitting PINN-corrected rebar map w/ noise on fit grid
+        hmd, ff = field_map_analysis('fma_helicalc_noise_Rebar_pinn_test', cfg_data_DS_Rebar_noise_pinn,
+                                     cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_Rebar_noise_pinn, cfg_plot_none)#cfg_plot_mpl_noise_pinn
+
+        # Evaluating PINN-corrected rebar map w/ noise on cartesian validation grid
+        hmd, ff = field_map_analysis('fma_valid_cart_Rebar_noise_pinn', cfg_data_DSCartVal_Rebar_noise_pinn,
+                                     cfg_geom_cart_pinn, cfg_params_DS_Mau13_new,
+                                     cfg_pickle_helicalc_Rebar_noise_pinn_rec, cfg_plot_none)
+
+
+        for unc in ['MetUnc','CalibMagUnc','CalibRotUnc','TempUnc']:
+            for itoy in range(10):
+
+                path_DS_helicalc_pinn_unc = mu2e_ext_path+f'Bmaps/ensembles/{unc}/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars_{unc}{itoy}_PINN_Subtracted.Mu2E.p'
+            
+                cfg_data_DS_helicalc_pinn_unc   = cfg_data('helicalc', 'DS', path_DS_helicalc_pinn_unc,
+                                                           ('Z>4.200', 'Z<13.900'))
+            
+                cfg_pickle_helicalc_pinn_unc  = cfg_pickle(use_pickle=True, save_pickle=True,
+                                                           load_name='helicalc_pinn',
+                                                           save_name=f'helicalc_pinn_{unc}{itoy}', recreate=False)
+
+                # Fitting PINN-corrected map on fit grid
+                hmd, ff = field_map_analysis(f'fma_helicalc_pinn_{unc}{itoy}', cfg_data_DS_helicalc_pinn_unc,
+                                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                             cfg_pickle_helicalc_pinn_unc, cfg_plot_none)
+
+                path_DSCartVal_pinn_unc = mu2e_ext_path+f'Bmaps/ensembles/{unc}/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars_{unc}{itoy}_PINN_Subtracted.Mu2E.p'
+            
+                cfg_data_DSCartVal_pinn_unc     = cfg_data('helicalc', 'DS', path_DSCartVal_pinn_unc,
+                                                           ('Z>4.200', 'Z<13.900'))
+            
+                cfg_pickle_helicalc_pinn_unc_rec = cfg_pickle(use_pickle=True, save_pickle=False,
+                                                              load_name=f'helicalc_pinn_{unc}{itoy}',
+                                                              save_name=f'helicalc_pinn_{unc}{itoy}', recreate=True)
+
+                # Evaluating PINN-corrected map on cartesian validation grid
+                hmd, ff = field_map_analysis(f'fma_valid_cart_pinn_{unc}{itoy}', cfg_data_DSCartVal_pinn_unc,
+                                             cfg_geom_cart_pinn, cfg_params_DS_Mau13_new,
+                                             cfg_pickle_helicalc_pinn_unc_rec, cfg_plot_none)
+
+        m_vals = [1,2,3,4,5,6,7,8,9,10,20,30]
+        for im in range(len(m_vals)):
+            m = m_vals[im]
+            m0 = m_vals[im-1]
+            
+            cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ms_c1 = m)
+            cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ms_c1 = m)
+
+            bootstrap = False
+            if os.path.exists('../data/fit_params/DS_only_m{m0}_results_correl.p'):
+                bootstrap = True
+                print(f'Using bootstrap from {m0} to initialize {m} for old fit')
+
+            cfg_pickle_DS_only       = cfg_pickle(use_pickle=bootstrap, save_pickle=True,
+                                                  load_name=f'DS_only_m{m0}',
+                                                  save_name=f'DS_only_m{m}', recreate=False)
+            
+            # Fitting DS only, old function
+            hmd, ff = field_map_analysis(f'fma_DS_only_m{m}', cfg_data_DS_only,
+                                         cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_only_ks,
+                                         cfg_pickle_DS_only, cfg_plot_mpl_nonuni)
+
+            bootstrap_new = False
+            if os.path.exists(f'../data/fit_params/DS_only_m{m0}_new_results_correl.p'):
+                bootstrap_new = True
+                print(f'Using bootstrap from {m0} to initialize {m} for new fit')
+
+            cfg_pickle_DS_only_new   = cfg_pickle(use_pickle=bootstrap_new, save_pickle=True,
+                                                  load_name=f'DS_only_m{m0}_new',
+                                                  save_name=f'DS_only_m{m}_new', recreate=False)
+
+            # Fitting DS only, new function
+            hmd, ff = field_map_analysis(f'fma_DS_only_m{m}_new', cfg_data_DS_only,
+                                         cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                         cfg_pickle_DS_only_new, cfg_plot_mpl_nonuni)
+
+
+        for n in [1,2,3,4]:
+            for m in [10,20,30,40]:
+
+                cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ms_c1 = m)
+                cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ns_c1 = n)
+                cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ms_c1 = m)
+                cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ns_c1 = n)
+                
+                cfg_pickle_all_coils       = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                        load_name=f'All_coils_m{m}_n{n}',
+                                                        save_name=f'All_coils_m{m}_n{n}', recreate=False)
+            
+                # Fitting DS+TS+PS, old function
+                hmd, ff = field_map_analysis(f'fma_all_coils_m{m}_n{n}', cfg_data_all_coils,
+                                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_only_ks,
+                                             cfg_pickle_all_coils, cfg_plot_mpl_nonuni)
+                
+                cfg_pickle_all_coils_new   = cfg_pickle(use_pickle=False, save_pickle=True,
+                                                        load_name=f'All_coils_m{m}_n{n}_new',
+                                                        save_name=f'All_coils_m{m}_n{n}_new', recreate=False)
+
+                # Fitting DS+TS+PS, hybrid function
+                hmd, ff = field_map_analysis(f'fma_all_coils_m{m}_n{n}_new', cfg_data_all_coils,
+                                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                             cfg_pickle_all_coils_new, cfg_plot_mpl_nonuni)
+
+        for m in [30,40,50]:
+            for n in [3,4,5]:
+
+                cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ms_c1 = m)
+                cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ns_c1 = n)
+                cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ms_c1 = m)
+                cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ns_c1 = n)
+
+                bootstrap = False
+                if os.path.exists(f'../data/fit_params/helicalc_all_m{m}_n{n-1}_results_correl.p'):
+                    bootstrap = True
+                    print(f'Using bootstrap from m{m}, n{n-1} to initialize m{m}, n{n} for old fit')
+
+                cfg_pickle_helicalc_all      = cfg_pickle(use_pickle=bootstrap, save_pickle=True,
+                                                          load_name=f'helicalc_all_m{m}_n{n-1}',
+                                                          save_name=f'helicalc_all_m{m}_n{n}', recreate=False)
+        
+                # Fitting helicalc all, old function
+                hmd, ff = field_map_analysis(f'fma_helicalc_all_m{m}_n{n}', cfg_data_DS_helicalc_all,
+                                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_only_ks,
+                                             cfg_pickle_helicalc_all, cfg_plot_mpl_nonuni)
+
+                bootstrap = False
+                if os.path.exists(f'../data/fit_params/helicalc_all_m{m}_n{n-1}_new_results_correl.p'):
+                    bootstrap = True
+                    print(f'Using bootstrap from m{m}, n{n-1} to initialize m{m}, n{n} for new fit')
+
+                cfg_pickle_helicalc_all_new  = cfg_pickle(use_pickle=bootstrap, save_pickle=True,
+                                                          load_name=f'helicalc_all_m{m}_n{n-1}_new',
+                                                          save_name=f'helicalc_all_m{m}_n{n}_new', recreate=False)
+        
+                # Fitting helicalc all, new function
+                hmd, ff = field_map_analysis(f'fma_helicalc_all_m{m}_n{n}_new', cfg_data_DS_helicalc_all,
+                                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                             cfg_pickle_helicalc_all_new, cfg_plot_mpl_nonuni)
+
+        for L in [11.3,11.6]:
+            for m in [40,50,60]:
+                for n in [4,5,6]:
+                    
+                    cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ms_c1 = m)
+                    cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(ns_c1 = n)
+                    cfg_params_DS_Mau13_new     = cfg_params_DS_Mau13_new._replace(length1 = L)
+                    
+                    #cfg_pickle_helicalc_coils_new  = cfg_pickle(use_pickle=False, save_pickle=True,
+                    #                                            load_name=f'helicalc_coils_m{m}_n{n}_L{str(L).replace(".","p")}_new',
+                    #                                            save_name=f'helicalc_coils_m{m}_n{n}_L{str(L).replace(".","p")}_new', recreate=False)
+        
+                    # Fitting helicalc coils, new function
+                    #hmd, ff = field_map_analysis(f'fma_helicalc_coils_m{m}_n{n}_L{str(L).replace(".","p")}_new', cfg_data_DS_helicalc_coils,
+                    #                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                    #                             cfg_pickle_helicalc_coils_new, cfg_plot_mpl_nonuni)
+
+                    bootstrap = False
+                    if os.path.exists(f'../data/fit_params/helicalc_all_m{m}_n{n-1}_L{str(L).replace(".","p")}_new_noise_results_correl.p'):
+                        bootstrap = True
+                        print(f'Using bootstrap from m{m}, n{n-1} to initialize m{m}, n{n} for new fit w/ noise')
+
+                    cfg_pickle_helicalc_all_new  = cfg_pickle(use_pickle=bootstrap, save_pickle=True,
+                                                              load_name=f'helicalc_all_m{m}_n{n-1}_L{str(L).replace(".","p")}_new_noise',
+                                                              save_name=f'helicalc_all_m{m}_n{n}_L{str(L).replace(".","p")}_new_noise', recreate=False)
+        
+                    # Fitting helicalc full field, new function
+                    hmd, ff = field_map_analysis(f'fma_helicalc_all_m{m}_n{n}_L{str(L).replace(".","p")}_new_noise', cfg_data_DS_helicalc_all,
+                                                 cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_new,
+                                                 cfg_pickle_helicalc_all_new, cfg_plot_none)
+
+                    #cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ms_c1 = m)
+                    #cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(ns_c1 = n)
+                    #cfg_params_DS_Mau13_only_ks = cfg_params_DS_Mau13_only_ks._replace(length1 = L)
+
+                    #bootstrap = False
+                    #if os.path.exists(f'../data/fit_params/helicalc_all_m{m}_n{n-1}_L{str(L).replace(".","p")}_results_correl.p'):
+                    #    bootstrap = True
+                    #    print(f'Using bootstrap from m{m}, n{n-1} to initialize m{m}, n{n} for old fit')
+
+                    #cfg_pickle_helicalc_all  = cfg_pickle(use_pickle=bootstrap, save_pickle=True,
+                    #                                      load_name=f'helicalc_all_m{m}_n{n-1}_L{str(L).replace(".","p")}',
+                    #                                      save_name=f'helicalc_all_m{m}_n{n}_L{str(L).replace(".","p")}', recreate=False)
+        
+                    # Fitting helicalc full field, new function
+                    #hmd, ff = field_map_analysis(f'fma_helicalc_all_m{m}_n{n}_L{str(L).replace(".","p")}', cfg_data_DS_helicalc_all,
+                    #                             cfg_geom_cyl_800mm_long_full, cfg_params_DS_Mau13_only_ks,
+                    #                             cfg_pickle_helicalc_all, cfg_plot_mpl_nonuni)
         '''
-        sf = 1e-3 # 2e-4
-        # scales_lists = [[1.+sf, 1., 1., 1., 1.],]
-        # scales_lists = [[1.+sf, 1., 1., 1., 1.],
-        #                 [1., 1.+sf, 1., 1., 1.],
-        #                 [1., 1., 1.+sf, 1., 1.],
-        #                 [1., 1., 1., 1.+sf, 1.],
-        #                 [1., 1., 1., 1., 1.+sf],]
-        # nums = [0, 1, 2, 3, 4]
-        ###
-        # sf = 1e-3# +2e-4
-        scales_lists = [[1.+sf, 1., 1., 1., 1.],
-                        [1., 1., 1.+sf, 1., 1.],]
-        #                 # [1., 1.+sf, 1., 1., 1.],
-                        # [1., 1., 1.+sf, 1., 1.],
-                        # [1., 1., 1., 1.+sf, 1.],
-                        # [1., 1., 1., 1., 1.+sf]]
-        # nums = [0, 1, 3, 4]
-        nums = [0,2]
-        # nums = [0]
-        # scales_lists = [[1.+sf, 1., 1., 1., 1.],] # whoops
-        # nums = [0] # whoops part 2
-        # names = [f'Mau13_hp_{num}_bias_up' for num in nums]
-        names = [f'Mau13_hp_{num}_bias_up_huber' for num in nums]
-        # names = [f'Mau13_hp_{num}_bias_up_2E-04' for num in nums]
-        # names = [f'Mau13_hp_{num}_bias_up' for num in nums]
-        name0 = 'Mau13'
-        # names = [f'Mau13_hp_{num}_bias_up_{sf:1.0E}' for num in nums]
-
-        for sfs, name in zip(scales_lists, names):
-            ####### recreate plots
-            # name = name # 'Mau13_sparsez'
-            cfg_p_rec_ = cfg_pickle(use_pickle=True, save_pickle=False,
-                                    load_name=name, save_name=name,
-                                    recreate=True)
-            ########
-            print(f"hallprobesim_redux: running sfs = {sfs}")
-            print(f"savenam: {name}")
-            # set up configs
-            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
-                                   x_steps=None, y_steps=None,
-                                   bad_calibration=[sfs, False, False], interpolate=False,
-                                   do2pi=False)
-
-            cfg_pickle_ = cfg_pickle(use_pickle=True, save_pickle=True,
-                                     load_name=name,
-                                     # load_name=name0,
-                                     save_name=name+'_huber', recreate=False)
-            # run field_map_analysis
-            hmd, ff = field_map_analysis(f'fma_{name}_huber', cfg_data_DS_Mau13,
-                                         cfg_geom_, cfg_params_DS_Mau13,
-                                         # cfg_pickle_, cfg_plot_mpl)
-                                         cfg_p_rec_, cfg_plot_mpl)
-        '''
-
-        # ONE HALL PROBE BIASED
-        # fit on bias data
-        # hmd, ff = field_map_analysis('fma_mau13_middle_bias_up', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long_scale_hp, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_scale_hp, cfg_plot_mpl)
-        # recreate on true data
-        # hmd, ff = field_map_analysis('fma_mau13_middle_bias_up_rec_truedata', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_scale_hp_rec, cfg_plot_mpl)
-
-        '''
-        # Run bias fit trying on each probe
-        # but not probe #3 because I did that one first
-        # scales_lists = [[1.+1e-3, 1., 1., 1., 1.],
-        #                 [1., 1.+1e-3, 1., 1., 1.],
-        #                 [1., 1., 1., 1.+1e-3, 1.],
-        #                 [1., 1., 1., 1., 1.+1e-3]]
-        sf = +2e-4
-        scales_lists = [[1.+sf, 1., 1., 1., 1.],
-                        [1., 1.+sf, 1., 1., 1.],
-                        [1., 1., 1.+sf, 1., 1.],
-                        [1., 1., 1., 1.+sf, 1.],
-                        [1., 1., 1., 1., 1.+sf]]
-        nums = [0, 1, 3, 4]
-        # scales_lists = [[1.+sf, 1., 1., 1., 1.],] # whoops
-        # nums = [0] # whoops part 2
-        # names = [f'Mau13_hp_{num}_bias_up' for num in nums]
-        names = [f'Mau13_hp_{num}_bias_up_{sf:1.0E}' for num in nums]
-
-        for sfs, name in zip(scales_lists, names):
-            print(f"hallprobesim_redux: running sfs = {sfs}")
-            print(f"savenam: {name}")
-            # set up configs
-            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
-                                   x_steps=None, y_steps=None,
-                                   bad_calibration=[sfs, False, False], interpolate=False,
-                                   do2pi=False, do_selection=True)
-
-            cfg_pickle_ = cfg_pickle(use_pickle=False, save_pickle=True,
-                                     load_name=name,
-                                     save_name=name, recreate=False)
-            # run field_map_analysis
-            hmd, ff = field_map_analysis(f'fma_{name}', cfg_data_DS_Mau13,
-                                         cfg_geom_, cfg_params_DS_Mau13,
-                                         cfg_pickle_, cfg_plot_mpl)
-        '''
-
-
-        '''
-        # Run with 5 randomized sfs
-        subdir = 'ensemble_random_scale_factor/'
-        df_ic = pd.read_pickle('/home/ckampa/data/pickles/Mu2E/ensemble_random_scale_factor/run000_random_sfs_init_conds_df.p')
-        print('Randomized init cond DataFrame:')
-        print(df_ic.head())
-        # scales_lists = list(df_ic[[f'hp_{n}_sf' for n in range(5)]].values)
-        scales_lists = [list(i) for i in df_ic[[f'hp_{n}_sf' for n in range(5)]].values]
-        names = [f'Mau13_{row.id}' for row in df_ic.itertuples()]
-
-        for sfs, name in zip(scales_lists, names):
-            ####### recreate plots
-            # name = name # 'Mau13_sparsez'
-            cfg_p_rec_ = cfg_pickle(use_pickle=True, save_pickle=False,
-                                    load_name=subdir+name, save_name=subdir+name,
-                                    recreate=True)
-            ########
-            print(f"hallprobesim_redux: running sfs = {sfs}")
-            print(f"savename: {name}")
-            # set up configs
-            cfg_geom_   = cfg_geom('cyl', z_steps_DS_long, r_steps_800mm, phi_steps_8,
-                                   x_steps=None, y_steps=None,
-                                   bad_calibration=[sfs, False, False], interpolate=False,
-                                   do2pi=False, do_selection=True)
-
-            cfg_pickle_ = cfg_pickle(use_pickle=False, save_pickle=True,
-                                     load_name=subdir+name,
-                                     save_name=subdir+name, recreate=False)
-            # run field_map_analysis
-            hmd, ff = field_map_analysis(subdir+f'fma_{name}', cfg_data_DS_Mau13,
-                                         cfg_geom_, cfg_params_DS_Mau13,
-                                         # cfg_pickle_, cfg_plot_mpl)
-                                         cfg_p_rec_, cfg_plot_mpl)
-        '''
-
-
-        # cyl + hel
-        # hmd, ff = field_map_analysis('fma_mau13_cyl_hel_bs', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_cyl_hel_bs,
-        #                              cfg_pickle_Mau13_cyl_hel_bs, cfg_plot_mpl)
-
-
-        # TESTER
-        # hmd, ff = field_map_analysis('fma_mau13_test', cfg_data_DS_Mau13,
-        #                              cfg_geom_cyl_800mm_long, cfg_params_DS_Mau13_test,
-        #                              cfg_pickle_Mau13_test, cfg_plot_mpl)
-
-        ### FLAT REGION DS TESTS ####
-        # hmd, ff = field_map_analysis('fma_mau13_flat', cfg_data_DS_Mau13_flat,
-        #                              # cfg_geom_cyl_800mm_flat, cfg_params_DS_Mau13_5m,
-        #                              cfg_geom_cyl_800mm_flat, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_flat, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsez', cfg_data_DS_Mau13_flat,
-        #                              cfg_geom_cyl_800mm_flat_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_flat_sparsez, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi', cfg_data_DS_Mau13_flat,
-        #                              cfg_geom_cyl_800mm_flat_sparsephi, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_flat_sparsephi, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi_sparsez', cfg_data_DS_Mau13_flat,
-        #                              cfg_geom_cyl_800mm_flat_sparsephi_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_flat_sparsephi_sparsez, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_flat_sparsephi_sparsez_5mlength', cfg_data_DS_Mau13_flat,
-        #                              cfg_geom_cyl_800mm_flat_sparsephi_sparsez, cfg_params_DS_Mau13_5m,
-        #                              cfg_pickle_Mau13_flat_sparsephi_sparsez_5m, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_flat_sparserphi_sparsez', cfg_data_DS_Mau13_flat,
-        #                              cfg_geom_cyl_800mm_flat_sparserphi_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_flat_sparserphi_sparsez, cfg_plot_mpl)
-
-        ### GRADED REGION DS TESTS ####
-        # hmd, ff = field_map_analysis('fma_mau13_graded', cfg_data_DS_Mau13_graded,
-        #                              # cfg_geom_cyl_800mm_graded, cfg_params_DS_Mau13_5m,
-        #                              cfg_geom_cyl_800mm_graded, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_graded, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_graded_sparsez', cfg_data_DS_Mau13_graded,
-        #                              cfg_geom_cyl_800mm_graded_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_graded_sparsez, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_graded_sparsephi', cfg_data_DS_Mau13_graded,
-        #                              cfg_geom_cyl_800mm_graded_sparsephi, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_graded_sparsephi, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_graded_sparsephi_sparsez', cfg_data_DS_Mau13_graded,
-        #                              cfg_geom_cyl_800mm_graded_sparsephi_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_graded_sparsephi_sparsez_5m, cfg_plot_mpl)
-
-        # hmd, ff = field_map_analysis('fma_mau13_graded_sparserphi_sparsez', cfg_data_DS_Mau13_graded,
-        #                              cfg_geom_cyl_800mm_graded_sparserphi_sparsez, cfg_params_DS_Mau13,
-        #                              cfg_pickle_Mau13_graded_sparserphi_sparsez, cfg_plot_mpl)
-
-    # elif argv[1] == '--v':
-    #     print("Model configs imported!")
     else:
         pass

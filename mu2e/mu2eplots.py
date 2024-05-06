@@ -67,6 +67,7 @@ from IPython.display import display
 from plotly.offline import init_notebook_mode, iplot, plot
 from six.moves import range
 from six.moves import zip
+from mu2e import mu2e_ext_path
 # face color issue
 plt.rcParams['axes.facecolor']='white'
 plt.rcParams['savefig.facecolor']='white'
@@ -137,7 +138,7 @@ def mu2e_plot(df, x, y, conditions=None, mode='mpl', info=None, savename=None, a
 
 def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=None, save_name=None,
                 df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
-                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True):
+                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True,df_fine=None):
     """Generate 3D plots, x and y vs z.
 
     Generate a 3D surface plot for a given DF and three columns. An optional selection string is
@@ -178,6 +179,9 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
 
     if conditions:
         df, conditions_title = conditions_parser(df, conditions, do2pi)
+        if df_fine is not None:
+            df_fine, bla = conditions_parser(df_fine, conditions, do2pi)
+
 
     # Format the coordinates
     piv = df.pivot(x, y, z)
@@ -188,9 +192,15 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
     if df_fit:
         piv_fit = df.pivot(x, y, z+'_fit')
         Z_fit = np.transpose(piv_fit.values)
-        data_fit_diff = (Z - Z_fit)
-        Xa = np.concatenate(([X[0]], 0.5*(X[1:]+X[:-1]), [X[-1]]))
-        Ya = np.concatenate(([Y[0]], 0.5*(Y[1:]+Y[:-1]), [Y[-1]]))
+        if df_fine is None:
+            df_fine = df
+        df_fine = df_fine.eval(f'{z}_diff={z}-{z}_fit')
+        piv_fine = df_fine.pivot(x, y, z+'_diff')
+        data_fit_diff = np.transpose(piv_fine.values)
+        X_fine = piv_fine.index.values
+        Y_fine = piv_fine.columns.values
+        Xa = np.concatenate(([X_fine[0]], 0.5*(X_fine[1:]+X_fine[:-1]), [X_fine[-1]]))
+        Ya = np.concatenate(([Y_fine[0]], 0.5*(Y_fine[1:]+Y_fine[:-1]), [Y_fine[-1]]))
 
     # Prep save area
     if save_dir:
@@ -491,6 +501,211 @@ def mu2e_plot3d(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=No
 
     # return save_name
     return fig
+
+'''
+Method to plot DSFM-like field map
+For now, assuming idealized case where there are no missing measurements
+TODO fix this -- build flexibility to handle missing measurements
+'''
+
+def mu2e_plot3d_nonuniform_test(df, x, y, z, conditions=None, mode='mpl', info=None, save_dir=None, save_name=None,
+                                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
+                                do_title=True, title_simp=None, do2pi=False, units='mm',show_plot=True,df_fine=None):
+
+    _modes = ['mpl_nonuni']
+
+    if mode not in _modes:
+        raise ValueError(mode+' not one of: '+', '.join(_modes))
+
+    if conditions:
+        df, conditions_title = conditions_parser(df, conditions, do2pi)
+        if df_fine is not None:
+            df_fine, bla = conditions_parser(df_fine, conditions, do2pi)
+
+    X = df[x]
+    Y = df[y]
+    Z = df[z]
+
+    zmax_SP = np.max(df[df['HP'].str.contains('SP')].Z)
+    zmin_BP = np.min(df[df['HP'].str.contains('BP')].Z)
+    
+    # Process dataframe -- add NaNs and interpolate
+    # Some dataframes (ex. PINN) will drop R=0 point
+    if df[df.HP=='SP1'].shape[0] != 0 :
+        r_SP = [-0.095, -0.054, -0.0, 0.0, 0.054, 0.095]
+    else:
+        r_SP = [-0.095, -0.054, 0.054, 0.095]
+    r_BP = [-0.8, -0.656, -0.488, -0.319, -0.044, 0.044, 0.319, 0.488, 0.656, 0.8]
+    nSP = len(r_SP)
+    nBP = len(r_BP)
+    
+    #Z slices with SP points only
+    dfs_SP = []
+    df_SP = df[df.Z < zmin_BP-0.025]
+    for iSP in range(int(df_SP.shape[0]/nSP)):
+        df_SP_slice = df_SP[iSP*nSP:(iSP+1)*nSP]
+        df_BP = pd.DataFrame(columns=df.columns,index=range(nBP))
+        df_BP.loc[:,'R'] = r_BP
+        df_slice = pd.concat([df_SP_slice,df_BP])
+        df_slice.sort_values(by=['R'],inplace=True)
+        dfs_SP.append(df_slice.set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index())
+        dfs_SP.append(df_slice)
+    
+    # Z slices with BP points only
+    dfs_BP = []
+    df_BP = df[df.Z > zmax_SP+0.025]
+    for iBP in range(int(df_BP.shape[0]/nBP)):
+        df_BP_slice = df_BP[iBP*nBP:(iBP+1)*nBP]
+        df_SP = pd.DataFrame(columns=df.columns,index=range(nSP))
+        df_SP.loc[:,'R'] = r_SP
+        df_slice = pd.concat([df_BP_slice,df_SP])
+        df_slice.sort_values(by=['R'],inplace=True)
+        dfs_BP.append(df_slice)
+        dfs_BP.append(df_slice.set_index('R').interpolate(method='index',axis=0,limit_area='inside').reset_index())
+
+    #Z slices with both points
+    df_both = df[(df.Z > zmin_BP-0.025) & (df.Z < zmax_SP+0.025)]
+    slices = int(df_both.shape[0]/(nSP+nBP))
+    for idx in range(slices):
+        df_both.iloc[idx*(nSP+nBP):(idx+1)*(nSP+nBP)] = df_both[idx*(nSP+nBP):(idx+1)*(nSP+nBP)].sort_values(by=['R'])
+
+    df_wire = pd.concat(dfs_SP+[df_both]+dfs_BP)
+    
+    Xi    = np.array(df_wire[x       ]).reshape(int(df_wire.shape[0]/(nSP+nBP)),(nSP+nBP))
+    Yi    = np.array(df_wire[y       ]).reshape(int(df_wire.shape[0]/(nSP+nBP)),(nSP+nBP))
+    Z_fit = np.array(df_wire[z+'_fit']).reshape(int(df_wire.shape[0]/(nSP+nBP)),(nSP+nBP))
+
+    # If no fine-grained map provided, use fit map for heatmap
+    # However since this is a 'histogram', set SP Z values equal to closest BP Z
+    if df_fine is None:
+        df_fine = df
+        df_fine.loc[np.array(df_fine['HP'].str.contains('SP')),'Z'] -= 0.015
+        df_fine = df_fine.round({'Z':3})
+
+    df_fine = df_fine.eval(f'{z}_diff={z}-{z}_fit')
+    piv_fine = df_fine.pivot_table(z+'_diff',x,y)
+    X_fine = piv_fine.index.values
+    Y_fine = piv_fine.columns.values
+    dZ = np.transpose(piv_fine.values)
+    Xa = np.concatenate(([X_fine[0]], 0.5*(X_fine[1:]+X_fine[:-1]), [X_fine[-1]]))
+    Ya = np.concatenate(([Y_fine[0]], 0.5*(Y_fine[1:]+Y_fine[:-1]), [Y_fine[-1]]))
+    # TODO turn this on/off with a flag in cfg_plot
+    #errZ = np.transpose(df_fine.pivot_table(f'{z}_unc',x,y).values)
+    #relZ = np.abs(np.divide(dZ,errZ))
+    
+    # Prep save area
+    if save_dir:
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        if save_name is None:
+            save_name = '{0}_{1}{2}_{3}'.format(
+                z, x, y, '_'.join([i for i in conditions_title.split(', ') if i != 'and']))
+            save_name = re.sub(r'[<>=!\s]', '', save_name)
+
+            if df_fit:
+                save_name += '_fit'
+
+    # Start plotting
+    if 'mpl' in mode:
+        if not ax:
+            if ptype.lower() == '3d' and not df_fit:
+                fig = plt.figure()
+            elif ptype.lower() == 'heat':
+                fig = plt.figure()
+            else:
+                fig = plt.figure(figsize=plt.figaspect(0.4), constrained_layout=True)
+                fig.set_constrained_layout_pads(hspace=0., wspace=0.15)
+
+        if df_fit:
+            ax = fig.add_subplot(1, 2, 1, projection='3d')
+            ax.plot(X, Y, Z, 'ko', markersize=2, zorder=100)
+            ax.plot_wireframe(Xi, Yi, Z_fit, color='green', zorder=99)
+        elif ptype.lower() == '3d':
+            if not ax:
+                ax = fig.gca(projection='3d')
+            ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=plt.get_cmap('viridis'),
+                            linewidth=0, antialiased=False)
+        elif ptype.lower() == 'heat':
+            if ax:
+                pcm = ax.pcolormesh(X, Y, Z, cmap=plt.get_cmap('viridis'))
+            else:
+                plt.pcolormesh(X, Y, Z, cmap=plt.get_cmap('viridis'))
+        else:
+            raise KeyError(ptype+' is an invalid type!, must be "heat" or "3D"')
+
+        plt.xlabel(f'{x} ({units})', fontsize=18)
+        plt.ylabel(f'{y} ({units})', fontsize=18)
+        if ptype.lower() == '3d':
+            ax.set_zlabel(z+' (G)', fontsize=18)
+            ax.ticklabel_format(style='sci', axis='z')
+            ax.zaxis.labelpad = 20
+            ax.zaxis.set_tick_params(direction='out', pad=10)
+            ax.xaxis.labelpad = 20
+            ax.yaxis.labelpad = 20
+        elif do_title:
+            if ax:
+                cb = plt.colorbar(pcm)
+            else:
+                cb = plt.colorbar()
+            cb.set_label(z+' (G)', fontsize=18)
+        if do_title:
+            if title_simp:
+                plt.title(title_simp)
+            elif info is not None:
+                plt.title(f'{info} {z} vs {x} and {y} for DS\n{conditions_title}',
+                          fontsize=20)
+            else:
+                plt.title('{0} vs {1} and {2} for DS\n{3}'.format(z, x, y, conditions_title),
+                          fontsize=20)
+        if ptype.lower() == '3d':
+            ax.view_init(elev=30., azim=30)
+        if save_dir and not df_fit:
+            plt.savefig(save_dir+'/'+save_name+'.png')
+            plt.clf()
+
+        if df_fit:
+            ax2 = fig.add_subplot(1, 2, 2)
+            max_val = np.nanmax(dZ)
+            min_val = np.nanmin(dZ)
+            abs_max_val = max(abs(max_val), abs(min_val))
+            heat = ax2.pcolormesh(Xa, Ya, dZ, cmap=plt.get_cmap('viridis'), vmin=-abs_max_val, vmax=abs_max_val)
+            cb = plt.colorbar(heat, aspect=20)
+            plt.title('Residual, Data-Fit', fontsize=20)
+            cb.set_label('Data-Fit (G)', fontsize=18)
+            ax2.set_xlabel(f'{x} ({units})', fontsize=18)
+            ax2.set_ylabel(f'{y} ({units})', fontsize=18)
+            ax.dist = 11 # default 10
+            if save_dir:
+                plt.savefig(save_dir+'/'+save_name+'_heat.pdf')
+            plt.clf()
+
+            # TODO turn this on/off with a flag in cfg_plot
+            '''
+            fig2 = plt.figure(figsize=plt.figaspect(0.4), constrained_layout=True)
+            fig2.set_constrained_layout_pads(hspace=0., wspace=0.2)
+
+            ax  = fig2.add_subplot(1, 2, 1)
+            max_val = np.nanmax(errZ)
+            heat = ax.pcolormesh(Xa, Ya, errZ, cmap=plt.get_cmap('viridis'), vmin=0.0, vmax=abs_max_val)
+            cb = plt.colorbar(heat, aspect=20)
+            plt.title('Fit Uncertainty', fontsize=20)
+            cb.set_label('Fit Unc (G)', fontsize=18)
+            ax.set_xlabel(f'{x} ({units})', fontsize=18)
+            ax.set_ylabel(f'{y} ({units})', fontsize=18)
+
+            ax2 = fig2.add_subplot(1, 2, 2)
+            max_val = np.nanmax(relZ)
+            heat2 = ax2.pcolormesh(Xa, Ya, relZ, cmap=plt.get_cmap('viridis'), vmin=0.0, vmax=abs_max_val)
+            cb2 = plt.colorbar(heat2, aspect=20)
+            plt.title('Residual / Uncertainty', fontsize=20)
+            cb2.set_label('Res / Unc', fontsize=18)
+            ax2.set_xlabel(f'{x} ({units})', fontsize=18)
+            ax2.set_ylabel(f'{y} ({units})', fontsize=18)
+
+            if save_dir:
+                plt.savefig(save_dir+'/'+save_name+'_unc.pdf')
+            plt.clf()
+            '''
 
 def mu2e_plot3d_nonuniform_cyl(df, x, y, z, conditions=None, mode='mpl', cut_color=5, info=None, save_dir=None, save_name=None,
                                df_fit=None, ptype='3d', aspect='square', cmin=None, cmax=None, fig=None, ax=None,
@@ -1160,13 +1375,7 @@ def conditions_parser(df, conditions, do2pi=False):
     # Make radii negative for negative phi values (for plotting purposes)
     if phi is not None:
         isc = np.isclose
-        if do2pi:
-            nphi = phi+np.pi
-        else:
-            if isc(phi, 0):
-                nphi = np.pi
-            else:
-                nphi = phi-np.pi
+        nphi = phi + np.pi if do2pi else phi - np.pi
         df = df[(isc(phi, df.Phi)) | (isc(nphi, df.Phi))]
         df.loc[isc(nphi, df.Phi), 'R'] *= -1
 

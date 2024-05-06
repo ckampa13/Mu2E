@@ -107,7 +107,6 @@ class DataFrameMaker(object):
 
         # Load from pickle (all are identical in format).  Otherwise, load from csv
         if input_type == 'pkl':
-            # self.data_frame = pkl.load(open(self.file_name+'.p', "rb"), encoding='latin1')
             try:
                 self.data_frame = pd.read_pickle(self.file_name+'.p')
             except:
@@ -119,7 +118,6 @@ class DataFrameMaker(object):
             self.data_frame = pd.read_csv(
                 self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
                 skiprows=6)
-                # self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True)
 
         elif 'Mau10' in self.field_map_version and 'rand' in self.file_name:
             self.data_frame = pd.read_csv(
@@ -129,8 +127,6 @@ class DataFrameMaker(object):
             self.data_frame = pd.read_csv(
                 self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
                 skiprows=6)
-                # self.file_name+'.table', header=None, names=header_names, delim_whitespace=True,
-                # skiprows=8)
 
         elif 'GA01' in self.field_map_version:
             self.data_frame = pd.read_csv(
@@ -206,6 +202,7 @@ class DataFrameMaker(object):
                 self.data_frame = pd.read_csv(
                     self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
                     skiprows=4)
+
         elif 'Cole' in self.field_map_version:
             self.data_frame = pd.read_csv(
                 self.file_name+'.txt', header=None, names=header_names, delim_whitespace=True,
@@ -278,11 +275,8 @@ class DataFrameMaker(object):
 
         if not reverse:
             # Generate radial position column
-            # self.data_frame.loc[:, 'R'] = rt.apply_make_r(self.data_frame['X'].values,
-            #                                               self.data_frame['Y'].values)
-            # self.data_frame.eval('R = sqrt(A**2+B**2)', inplace=True)
             self.data_frame.eval('R = sqrt(X**2+Y**2)', inplace=True)
-
+            
             # Generate negative Y-axis values for some hard-coded versions.
             if (any([vers in self.field_map_version for vers in ['Mau9', 'Mau10', 'GA01']]) and
                ('rand' not in self.file_name)):
@@ -292,23 +286,35 @@ class DataFrameMaker(object):
                 data_frame_lower.eval('By = By*-1', inplace=True)
                 self.data_frame = pd.concat([self.data_frame, data_frame_lower])
 
-            # Generate phi position column
-            # self.data_frame.loc[:, 'Phi'] = rt.apply_make_theta(self.data_frame['X'].values,
-            #                                                     self.data_frame['Y'].values)
             self.data_frame.eval('Phi = arctan2(Y,X)', inplace=True)
-            # Generate Bphi field column
-            # self.data_frame.loc[:, 'Bphi'] = rt.apply_make_bphi(self.data_frame['Phi'].values,
-            #                                                     self.data_frame['Bx'].values,
-            #                                                     self.data_frame['By'].values)
+                
+            # If running on an idealized DSCylFMSAll grid, will have multiple copies of the R=0 point,
+            # one for each phi step. However phi information gets lost when propagating through helicalc.
+            # Need to add back phi information, before computing Bphi / Br
+            phi_vals = np.unique(np.array(self.data_frame.Phi).round(decimals=6))
+            if len(phi_vals) != 16:
+                print(phi_vals)
+                exit()
+            z_steps_r0 = np.unique(self.data_frame[self.data_frame.R==0.]['Z'])
+            updated = 0
+            for z_step in z_steps_r0:
+                # More than one row with R=0 for given Z
+                if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] > 1:
+                    # These are duplicates if Phi is ~same between rows (within machine precision)
+                    if np.var(self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)]['Phi']) < 1e-10:
+                        # Check # duplicates actually equals nPhiSteps
+                        if self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0] == len(phi_vals):
+                            self.data_frame.loc[(self.data_frame.R==0.) & (self.data_frame.Z==z_step),'Phi'] = phi_vals
+                            updated += 1
+                        else:
+                            print(f"Cannot fill Phi for R==0, Z=={z_step} -- {self.data_frame[(self.data_frame.R==0.) & (self.data_frame.Z==z_step)].shape[0]} lines but {len(phi_vals)} phi values")
+            if updated != 0:
+                print(f'Updated phi values at R=0 for {updated} z steps ({len(z_steps_r0)} z steps total)')
+
             self.data_frame.eval('Bphi = -Bx*sin(Phi)+By*cos(Phi)', inplace=True)
-            # Generate Br field column
-            # self.data_frame.loc[:, 'Br'] = rt.apply_make_br(self.data_frame['Phi'].values,
-            #                                                 self.data_frame['Bx'].values,
-            #                                                 self.data_frame['By'].values)
             self.data_frame.eval('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
-            # self.data_frame.query('Br = Bx*cos(Phi)+By*sin(Phi)', inplace=True)
+            
         elif reverse and not descale:
-            # self.data_frame.Phi = self.data_frame.Phi-np.pi
             self.data_frame.eval('X = R*cos(Phi)', inplace=True)
             self.data_frame.eval('Y = R*sin(Phi)', inplace=True)
 
@@ -325,20 +331,6 @@ class DataFrameMaker(object):
             if not isinstance(pitch, float):
                 raise TypeError("If `helix` is True, pitch must be a float")
             raise NotImplementedError('`helix` option disabled')
-
-            # self.data_frame.loc[:, 'Zeta'] = rt.apply_make_zeta(self.data_frame['Z'].values,
-            #                                                     self.data_frame['Phi'].values,
-            #                                                     pitch)
-
-            # self.data_frame.loc[:, 'Bphi_wald'] = rt.apply_make_bphi_wald(
-            #     self.data_frame['Phi'].values, self.data_frame['R'].values,
-            #     self.data_frame['Bx'].values, self.data_frame['By'].values, pitch)
-
-            # self.data_frame.loc[:, 'Bzeta'] = rt.apply_make_bzeta(
-            #     self.data_frame['Phi'].values, self.data_frame['R'].values,
-            #     self.data_frame['Bx'].values, self.data_frame['By'].values,
-            #     self.data_frame['Bz'].values,
-            #     pitch)
 
         # Clean up, sort, round off.
         self.data_frame.sort_values(['X', 'Y', 'Z'], inplace=True)
@@ -402,7 +394,7 @@ def g4root_to_df(input_name, make_pickle=False, do_basic_modifications=False,
 
     df_ntpart = df_nttvd = df_ntvd = None
 
-    if tree_prefix is not '':
+    if tree_prefix != '':
         tree_prefix = tree_prefix+'/'
     if do_part:
         df_ntpart = read_root(input_root, tree_prefix+'ntpart', ignore='*vd')
@@ -416,22 +408,15 @@ def g4root_to_df(input_name, make_pickle=False, do_basic_modifications=False,
             df_ntpart.eval('x = x+3904', inplace=True)
             df_ntpart.eval('xstop = xstop+3904', inplace=True)
             df_ntpart.eval('parent_x = parent_x+3904', inplace=True)
-            # df_ntpart['runevt'] = (str(cluster)+df_ntpart.subrun.astype(int).astype(str) +
-            #                        df_ntpart.evt.astype(int).astype(str)).astype(int)
         if do_tvd:
             df_nttvd.eval('x = x+3904', inplace=True)
-            # df_nttvd['runevt'] = (str(cluster)+df_nttvd.subrun.astype(int).astype(str) +
-            #                       df_nttvd.evt.astype(int).astype(str)).astype(int)
             df_nttvd.eval('p = sqrt(px**2+py**2+pz**2)', inplace=True)
         if do_vd:
             df_ntvd.eval('x = x+3904', inplace=True)
-            # df_ntvd['runevt'] = (str(cluster)+df_ntvd.subrun.astype(int).astype(str) +
-            #                      df_ntvd.evt.astype(int).astype(str)).astype(int)
             df_ntvd.eval('p = sqrt(px**2+py**2+pz**2)', inplace=True)
 
     if make_pickle:
         print('loading into hdf5')
-        # pkl.dump((df_nttvd, df_ntpart), open(input_name + '.p', "wb"), pkl.HIGHEST_PROTOCOL)
         store = pd.HDFStore(input_name+'.h5')
         if do_part:
             store['df_ntpart'] = df_ntpart
@@ -461,386 +446,88 @@ def g4root_to_df_skim_and_combo(input_name, total_n):
 
 if __name__ == "__main__":
     from mu2e import mu2e_ext_path
-    # for PS
-    # data_maker = DataFrameMaker('../datafiles/Mau10/Standard_Maps/Mu2e_PSMap',input_type = 'csv',
-    #                            field_map_version='Mau10')
-    # data_maker.do_basic_modifications(3904)
-    # data_maker.make_dump()
-
-    # for DS
-    # data_maker = DataFrameMaker('../datafiles/FieldMapData_1760_v5/Mu2e_DSMap',input_type = 'csv')
-    # data_maker = DataFrameMaker('../datafiles/FieldMapsGA01/Mu2e_DS_GA0',input_type = 'csv',
-    #                            field_map_version='GA01')
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/FieldMapsGA04/Mu2e_DS_GA04',
-    #                             input_type='csv', field_map_version='GA04')
-    # data_maker = DataFrameMaker('../datafiles/FieldMapsGA04/Mu2e_DS_GA0',input_type = 'csv',
-    #                            field_map_version='GA04')
-    # data_maker = DataFrameMaker('../datafiles/FieldMapsGA_Special/Mu2e_DS_noPSTS_GA0',
-    #                            input_type='csv', field_map_version='GA05')
-    # data_maker = DataFrameMaker('../datafiles/FieldMapsGA_Special/Mu2e_DS_noDS_GA0',
-    #                            input_type='csv', field_map_version='GA05')
-    # data_maker = DataFrameMaker('../datafiles/Mau10/Standard_Maps/Mu2e_DSMap', input_type='csv',
-    #                            field_map_version='Mau10')
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/Mau10/Standard_Maps/Mu2e_DSMap_rand1mil',
-    #                             input_type='csv', field_map_version='Mau10')
-    # data_maker.do_basic_modifications()
-    # data_maker = DataFrameMaker('../datafiles/Mau10/TS_and_PS_OFF/Mu2e_DSMap',input_type='csv',
-    #                            field_map_version='Mau10')
-    # data_maker = DataFrameMaker('../datafiles/Mau10/DS_OFF/Mu2e_DSMap',input_type='csv',
-    #                            field_map_version='Mau10')
-
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/FieldMapsPure/DS8_Bz_xzplane.table',
-    #                             input_type='csv', field_map_version='Pure_Cyl_2D')
-    # data_maker.do_basic_modifications(helix=True, pitch=7.38)
-
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/FieldMapsPure/DS8_HeliCalcfields',
-    #                             input_type='csv', field_map_version='Pure_Hel_2D')
-    # data_maker.do_basic_modifications(helix=True, pitch=7.38)
-
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/Mau9/MAX',
-    #                             input_type='csv', field_map_version='Mau9')
-    # data_maker.do_basic_modifications(-3896)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/TS5_DS_longbus',
-    #     input_type='csv', field_map_version='Ideal_w_LongBus_3D')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/DS_buswork_only_fullmap',
-    #     input_type='csv', field_map_version='Bus_Only_3D')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/DS_longbus_nocoils',
-    #     input_type='csv', field_map_version='Glass_longbus_only')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/DS-8_helix_no_leads',
-    #     input_type='csv', field_map_version='Glass_Helix_v3')
-    # data_maker.do_basic_modifications(-3904, helix=True, pitch=7.53)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/DS-8_with_leads_TOL1e-5',
-    #     input_type='csv', field_map_version='Glass_Helix_v2')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(mu2e_ext_path+'datafiles/FieldMapsGA05/TSdMap', input_type='csv',
-    #                             field_map_version='GA05')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/DS-8_with_leads_TOL1e-5',
-    #     input_type='csv', field_map_version='Glass_Helix_v2')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau11/Mu2e_DSMap_v11',
-    #     input_type='csv', field_map_version='Mau11')
-    # data_maker.do_basic_modifications(-3904)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau11/Mu2e_DSMap_5096_v11',
-    #     input_type='csv', field_map_version='Mau11')
-    # data_maker.do_basic_modifications(-3896)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau12/DSMap',
-    #     input_type='csv', field_map_version='Mau12')
-    # data_maker.do_basic_modifications(-3896)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau13/DSMap_NoBus_V13',
-    #     input_type='csv', field_map_version='Mau13')
-    # data_maker.do_basic_modifications(-3896)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/test_helix_5L_detail',
-    #     input_type='csv', field_map_version='Glass_Helix_v4')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/test_helix_10cm_pitch',
-    #     input_type='csv', field_map_version='Glass_Helix_v5')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsPure/test_helix_10cm_pitch_tol6',
-    #     input_type='csv', field_map_version='Glass_Helix_v6')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_3453103pts_06-29_231454',
-    #     input_type='csv', field_map_version='Cole_v1')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_845568pts_07-03_145644',
-    #     input_type='csv', field_map_version='Cole_v3',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_845568pts_07-06_160144',
-    #     input_type='csv', field_map_version='Cole_v4',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_3453103pts_08-10_003436',
-    #     input_type='csv', field_map_version='Cole_v5')
-    # data_maker.do_basic_modifications()
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_1232173pts_08-10_094943',
-    #     input_type='csv', field_map_version='Cole_v6')
-    # data_maker.do_basic_modifications(descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/solcalc_map_3453103pts_08-24_092341_ends',
-    #     input_type='csv', field_map_version='Cole_SC_1m_b')
-    # data_maker.do_basic_modifications(descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/endsonly_both_3453103pts_08-28_150638',
-    #     input_type='csv', field_map_version='Cole_endonly')
-    # data_maker.do_basic_modifications(descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/endsonly_both_3453103pts_08-28_184114',
-    #     input_type='csv', field_map_version='Cole_endonly_288')
-    # data_maker.do_basic_modifications(descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_r250mm_p10cm_lengthx10_1232173pts_09-07_160736',
-    #     input_type='csv', field_map_version='Cole_10x')
-    # data_maker.do_basic_modifications(descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/10x_bfield_map_cylin_985152pts_09-20_162454',
-    #     input_type='csv', field_map_version='Cole_10x_v2',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/10x_high_granularity_cylin_3846784pts_r250mm_p10cm_10-06_004607',
-    #     input_type='csv', field_map_version='Cole_10x_v2_hg',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_cylin_r250mm_p10cm_3846784pts_10-09_085027',
-    #     input_type='csv', field_map_version='Cole_250mm_short_hg',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/high_granularity_bfield_map_r1m_p10cm_3711104pts_10-07_120052',
-    #     input_type='csv', field_map_version='Cole_1m_hg',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_cylin_985152pts_10-03_150151',
-    #     input_type='csv', field_map_version='Cole_250mm_v2',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau13/Mu2e_DSMap_V13',
-    #     input_type='csv', field_map_version='Mau13')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/FieldMapsCole/bfield_map_r250mm_p10cm_lengthx10_1232173pts_09-07_160736',
-    #     input_type='pkl', field_map_version='Cole_1m_hg',
-    #     header_names=['R', 'Phi', 'Z', 'Br', 'Bphi', 'Bz'])
-    # data_maker.do_basic_modifications(descale=True, reverse=True)
-
-    # DS_OFF, TS_and_PS_OFF
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau10/DS_OFF/DS_OFF_Mu2e_DSMap',
-    #     input_type='csv', field_map_version='Mau10')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Normal Mau10
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau10_DSMap',
-    #     input_type='csv', field_map_version='Mau10')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'datafiles/Mau10/TS_and_PS_OFF/TS_and_PS_OFF_Mu2e_DSMap',
-    #     input_type='csv', field_map_version='Mau10')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # coil shift no bus bars
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/DSMap_coilshift',
-    #     input_type='csv', field_map_version='Mau13')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # coil shift with bus bars
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/DSMap_coilshift_plus_bus',
-    #     input_type='csv', field_map_version='Mau13')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # bus bars only
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau13/DSMap_bus_only',
-    #     input_type='csv', field_map_version='Mau13_bus_only')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # coils only
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau13/DSMap_helical_windings_only',
-    #     input_type='csv', field_map_version='Mau13_helical_windings_only')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Mau9 0.7*DS (pion degrader)
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau9/DS_70Percent/Mu2e_DSMap',
-    #     input_type='csv', field_map_version='Mau9_x70')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    ## for more pion studies (prepping Mau9, Mau10, Mau12, Mau13 [already done])
-    # Mau9
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau9/Mu2e_DSMap_Mau9',
-    #     input_type='csv', field_map_version='Mau9')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Mau10
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau10/Mu2e_DSMap_Mau10',
-    #     input_type='csv', field_map_version='Mau10')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Mau12
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau12/DSMap_Mau12',
-    #     input_type='csv', field_map_version='Mau12')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Mau13 70% DS
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau13/DSMap70',
-    #     input_type='csv', field_map_version='Mau13_70')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # Mau13 50% DS
-    # data_maker = DataFrameMaker(
-    #     mu2e_ext_path+'Bmaps/Mau13/DSMap50',
-    #     input_type='csv', field_map_version='Mau13_50')
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-
-    # helicalc (PS+TS, DS helicalc coils, no busbars, no interlayer connects)
-    # all scaling is correct (m and G)
-    # note adding file extension is a bit of a kludge
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.full.pkl',
-    #     input_type='pkl', field_map_version='helicalc_coils')
-    # # check which...
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # data_maker.do_basic_modifications(-3.904, descale=False)
-    # PS, TS off
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.PS_TS_Off.full.pkl',
-    #     input_type='pkl', field_map_version='helicalc_coils_no_ilc')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    ### straight bus bars
-    # all
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all_straight_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_straight_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # longitudinal only
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.long_straight_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_straight_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # tangential only
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.tang_straight_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_straight_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    ### arc bus bars
-    # all
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all_arc_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_arc_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # coaxial only
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.coax_arc_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_arc_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # to leads only
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.to_lead_arc_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_arc_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # transfer only
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.transfer_arc_bars.pkl',
-    #     input_type='pkl', field_map_version='helicalc_arc_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    ### ALL BUSBARS
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/busonly/Mau13.helicalc.DS_region.busbars_only.all.pkl',
-    #     input_type='pkl', field_map_version='helicalc_all_bars')
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    ###############
-    # helicalc (PS+TS, DS helicalc coils, no busbars, no interlayer connects)
-    # all scaling is correct (m and G)
-    # note adding file extension is a bit of a kludge
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/helicalc_complete/Mau13.helicalc.DS_region.standard.coils_only.pkl',
-    #     input_type='pkl', field_map_version='helicalc_coils_only')
-    # # check which...
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # # data_maker.do_basic_modifications(-3.904, descale=False)
-    #######
-    # alternate DS11, with DS coils as ideal solenoids
-    # ddir = '/home/shared_data/'
-    # data_maker = DataFrameMaker(
-    #     ddir+'Bmaps/CVMFS/DSMap_altDS11',
-    #     input_type='csv', field_map_version='Mau13_altDS11')
-    # # check which...
-    # data_maker.do_basic_modifications(-3.896, descale=True)
-    # # data_maker.do_basic_modifications(-3.904, descale=False)
-    # alternate DS11, helical windings
+    '''
+    # Regular grid
     data_maker = DataFrameMaker(
-         mu2e_ext_path+'Bmaps/DS_conductor_breakdown/Mu2e_V13_altDS11_DS_Helicalc_All_Coils_All_Busbars.pkl',
-        input_type='pkl', field_map_version='Mau13_altDS11_helical')
-    # check which...
-    data_maker.do_basic_modifications(-3.896, descale=False)
-    # data_maker.do_basic_modifications(-3.904, descale=False)
-    # Mau13, helical windings rerun
-    # data_maker = DataFrameMaker(
-    #      mu2e_ext_path+'Bmaps/DS_conductor_breakdown/Mu2e_V13_DS_Helicalc_All_Coils_All_Busbars.pkl',
-    #     input_type='pkl', field_map_version='Mau13_helical')
-    # # check which...
-    # data_maker.do_basic_modifications(-3.896, descale=False)
-    # # data_maker.do_basic_modifications(-3.904, descale=False)
+        mu2e_ext_path+'Bmaps/Mu2e_DSMap_V13',
+        input_type='csv', field_map_version='Mau13')
+    data_maker.do_basic_modifications(-3.896, descale=True)
 
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/DSMap_V15_with_shielding',
+        input_type='csv', field_map_version='Mau13')
+    data_maker.do_basic_modifications(-3.896, descale=True)
+    data_maker.make_dump('.Mu2E')
 
-    # data_maker.make_dump()
-    # data_maker.make_dump('_noOffset')
-    # data_maker.make_dump('_FIXED')
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/DSMap_V15_with_shielding_no_endcap',
+        input_type='csv', field_map_version='Mau13')
+    data_maker.do_basic_modifications(-3.896, descale=True)
+    '''
+    # helicalc (PS+TS, DS helicalc coils, interlayer connects, and busbars)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils_All_Busbars.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+    '''
+    # Cartesian grid for validation
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCartVal_Helicalc_All_Coils_All_Busbars.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+    '''
     data_maker.make_dump('.Mu2E')
     print(data_maker.data_frame.head())
     print(data_maker.data_frame.tail())
+    '''
+    # helicalc (PS+TS, DS helicalc coils)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Coils.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+    
+    data_maker.make_dump('.Mu2E')
+    print(data_maker.data_frame.head())
+    print(data_maker.data_frame.tail())
+
+    # helicalc (busbars)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_Helicalc_All_Busbars_Only.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+    
+    data_maker.make_dump('.Mu2E')
+    print(data_maker.data_frame.head())
+    print(data_maker.data_frame.tail())
+
+    # helicalc (fine grid, PS+TS, DS helicalc coils, interlayer connects, and busbars)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFine_Helicalc_All_Coils_All_Busbars.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+    
+    data_maker.make_dump('.Mu2E')
+    print(data_maker.data_frame.head())
+    print(data_maker.data_frame.tail())
+
+    # DS only, ideal solenoid (SolCalc)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_SolCalc_DS_Only.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+
+    data_maker.make_dump('.Mu2E')
+    print(data_maker.data_frame.head())
+    print(data_maker.data_frame.tail())
+    
+    # DS+TS+PS, ideal solenoid (SolCalc)
+    data_maker = DataFrameMaker(
+        mu2e_ext_path+'Bmaps/Mu2e_V13_DSCylFMSAll_SolCalc_All_Coils.pkl',
+        input_type='pkl', field_map_version='helicalc_coils')
+    data_maker.do_basic_modifications(-3.904, descale=False)
+
+    data_maker.make_dump('.Mu2E')
+    print(data_maker.data_frame.head())
+    print(data_maker.data_frame.tail())
+
+    '''
