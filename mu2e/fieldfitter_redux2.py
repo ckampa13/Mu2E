@@ -568,7 +568,7 @@ class FieldFitter:
                         self.params.add(f'Dc{num}_{n}', value=np.pi/4., min=0, max=np.pi, vary=True)
                     # n=0 is constant term, no phase
                     else:
-                        self.params.add(f'Dc{num}_{n}', value=0., vary=False)
+                        self.params.add(f'Dc{num}_{n}', value=np.pi/2, vary=False)
                 elif n > 0:
                     self.params[f'Dc{num}_{n}'].min = 0.0
                     self.params[f'Dc{num}_{n}'].max = np.pi
