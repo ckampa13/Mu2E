@@ -730,7 +730,7 @@ class FieldFitter:
         ns_range = range(self.params[f'ns_c{num}'].value)
         # np.random.seed(101)
         # why do we initialize d like this?
-        ##d_vals = np.linspace(0, 1, len(ns_range))[::-1]
+        # d_vals = np.linspace(0, 1, len(ns_range))[::-1]
         # d_vals = np.linspace(0, 1, len(ns_range))
         d_vals = 0.5*np.ones(len(ns_range))
         # d_vals = np.zeros(len(ns_range))

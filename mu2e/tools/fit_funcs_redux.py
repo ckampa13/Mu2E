@@ -2296,7 +2296,7 @@ def brzphi_3d_producer_giant_function(z, r, phi,
 
     for m in range(ms_c1):
         # FIXME! Decide whether to use m or m+1
-        ##cms1[m] = ((m+1)*np.pi/length1)
+        # cms1[m] = ((m+1)*np.pi/length1)
         # cms1[m] = (m*np.pi/length1)
         # trying new formulation, 10/12/22
         cms1[m] = (2*(m+1)*np.pi/length1)
@@ -3193,6 +3193,9 @@ def brzphi_3d_producer_giant_function_v1003(z, r, phi,
                 if abs(r[i]) >= 1e-5:
                     model_phi[i] += n*(D*np.cos(n*phi[i]) - (1-D)*np.sin(n*phi[i])) * \
                         (1/r[i])*iv[i]*(A*np.cos(cms*z[i]) + B*np.sin(cms*z[i]))
+                elif n == 1:
+                    model_phi[i] += n*(D*np.cos(n*phi[i]) - (1-D)*np.sin(n*phi[i])) * \
+                        (cms / 2.)*(A*np.cos(cms*z[i]) + B*np.sin(cms*z[i]))
             else:
                 model_r[i] += (1-D) * \
                     ivp[i]*cms*(A*np.cos(cms*z[i]) + B*np.sin(cms*z[i]))
