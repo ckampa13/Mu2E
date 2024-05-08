@@ -84,3 +84,5 @@ datafiles/
 fit_params/
 .ipynb_checkpoints/
 
+# symlink for data
+data
